@@ -63,6 +63,8 @@ function InlineExpand({
   );
 }
 
+export type HeroComponentType = "badge" | "title" | "subtitle" | "avatar" | "ctas" | "cta1" | "cta2";
+
 export interface HeroBlockSettingsProps {
   block: BuilderBlock;
   updateBlockSettings: (blockId: string, patch: Record<string, unknown>) => void;
@@ -72,6 +74,8 @@ export interface HeroBlockSettingsProps {
   addToStringList: (blockId: string, key: "carouselImages" | "images" | "logos", value: string) => void;
   removeFromStringList: (blockId: string, key: "carouselImages" | "images" | "logos", idx: number) => void;
   FONT_OPTIONS: { value: string; label: string }[];
+  selectedComponent?: HeroComponentType | null;
+  onClearSelection?: () => void;
 }
 
 export function HeroBlockSettings({
@@ -83,7 +87,11 @@ export function HeroBlockSettings({
   addToStringList,
   removeFromStringList,
   FONT_OPTIONS,
+  selectedComponent = null,
+  onClearSelection,
 }: HeroBlockSettingsProps) {
+  const show = (...components: HeroComponentType[]) =>
+    !selectedComponent || components.includes(selectedComponent);
   const carouselImages = Array.isArray(block.settings.carouselImages)
     ? (block.settings.carouselImages as unknown[]).filter((v): v is string => typeof v === "string")
     : [];
@@ -369,10 +377,26 @@ export function HeroBlockSettings({
 
   return (
     <div className="space-y-4">
+      {selectedComponent && onClearSelection && (
+        <div className="flex items-center justify-between rounded-lg border border-indigo-200 bg-indigo-50 px-3 py-2">
+          <span className="text-sm font-medium text-indigo-800">
+            Editing: {selectedComponent === "cta1" ? "Primary CTA" : selectedComponent === "cta2" ? "Secondary CTA" : selectedComponent.charAt(0).toUpperCase() + selectedComponent.slice(1)}
+          </span>
+          <button
+            type="button"
+            onClick={onClearSelection}
+            className="text-xs font-medium text-indigo-600 hover:text-indigo-800 underline"
+          >
+            Show all
+          </button>
+        </div>
+      )}
       {/* Content */}
+      {(show("badge") || show("title") || show("subtitle") || show("avatar")) && (
       <div>
         <p className={SECTION_TITLE}>Content</p>
         <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+          {show("title") && (
           <div className="lg:col-span-2">
             <label className={LABEL_CLASS}>Title</label>
             <Input
@@ -382,6 +406,8 @@ export function HeroBlockSettings({
               className="h-9"
             />
           </div>
+          )}
+          {show("badge") && (
           <div className="lg:col-span-2 flex items-end gap-2">
             <label className={LABEL_CLASS} />
             <label className="flex items-center gap-2 text-xs text-zinc-600">
@@ -401,7 +427,9 @@ export function HeroBlockSettings({
               />
             )}
           </div>
+          )}
         </div>
+        {show("subtitle") && (
         <div className="mt-2">
           <div className="flex items-center gap-2">
             <label className={LABEL_CLASS}>Subtitle</label>
@@ -421,6 +449,8 @@ export function HeroBlockSettings({
             rows={subtitleExpanded ? 3 : 1}
           />
         </div>
+        )}
+        {show("avatar") && (
         <div className="mt-2">
           <label className={LABEL_CLASS}>Avatar</label>
           <ImageField
@@ -429,9 +459,12 @@ export function HeroBlockSettings({
             placeholder="Profile photo URL"
           />
         </div>
+        )}
       </div>
+      )}
 
       {/* Layout */}
+      {(show("title") || show("avatar") || !selectedComponent) && (
       <div>
         <p className={SECTION_TITLE}>Layout</p>
         <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-6">
@@ -801,8 +834,10 @@ export function HeroBlockSettings({
         </label>
         </div>
       </div>
+      )}
 
       {/* Typography */}
+      {(show("badge") || show("title") || show("subtitle") || show("cta1") || show("cta2") || !selectedComponent) && (
       <div>
         <p className={SECTION_TITLE}>Typography</p>
         <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-6">
@@ -1276,11 +1311,13 @@ export function HeroBlockSettings({
           )}
         </div>
       </div>
+      )}
 
       {/* Buttons */}
+      {(show("badge") || show("cta1") || show("cta2") || !selectedComponent) && (
       <div>
         <p className={SECTION_TITLE}>Buttons</p>
-        {Boolean(block.settings.badgeVisible ?? true) && (
+        {Boolean(block.settings.badgeVisible ?? true) && (show("badge") || !selectedComponent) && (
           <div className="space-y-3">
             <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
               <div>
@@ -1349,6 +1386,8 @@ export function HeroBlockSettings({
             </div>
           </div>
         )}
+        {(show("cta1") || show("cta2") || !selectedComponent) && (
+        <>
         <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-5">
           <div>
             <label className={LABEL_CLASS}>Position</label>
@@ -1481,6 +1520,7 @@ export function HeroBlockSettings({
           </div>
         </div>
         <div className="mt-3 space-y-3">
+          {(show("cta1") || !selectedComponent) && (
           <div>
             <label className={LABEL_CLASS}>Primary CTA</label>
             <div className="flex flex-wrap items-center gap-2 mb-2">
@@ -1526,7 +1566,8 @@ export function HeroBlockSettings({
                 />
               </InlineExpand>
           </div>
-          {hasSecondaryCta ? (
+          )}
+          {(show("cta2") || !selectedComponent) && (hasSecondaryCta ? (
             <div>
               <label className={LABEL_CLASS}>Secondary CTA</label>
               <div className="flex flex-wrap items-center gap-2 mb-2">
@@ -1590,11 +1631,15 @@ export function HeroBlockSettings({
             >
               + Add secondary CTA
             </button>
-          )}
+          ))}
         </div>
+        </>
+        )}
       </div>
+      )}
 
       {/* Background */}
+      {!selectedComponent && (
       <div>
         <p className={SECTION_TITLE}>Background</p>
         <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
@@ -1989,8 +2034,10 @@ export function HeroBlockSettings({
           </div>
         )}
       </div>
+      )}
 
       {/* Borders */}
+      {!selectedComponent && (
       <div>
         <p className={SECTION_TITLE}>Borders</p>
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
@@ -2062,6 +2109,7 @@ export function HeroBlockSettings({
           )}
         </div>
       </div>
+      )}
     </div>
   );
 }

@@ -72,7 +72,9 @@ import {
 import { PageHeader } from "@/components/PageHeader";
 import { Skeleton } from "@/components/Skeleton";
 import { BlockTypePreview } from "@/components/design/BlockTypePreview";
-import { HeroBlockSettings } from "@/components/design/HeroBlockSettings";
+import { HeroBlockSettings, type HeroComponentType } from "@/components/design/HeroBlockSettings";
+import { HeroDesignCanvas } from "@/components/design/HeroDesignCanvas";
+import { HeroDesignPreview } from "@/components/design/HeroDesignPreview";
 import { ImageField } from "@/components/design/ImageField";
 const RichTextEditor = dynamic(
   () => import("@/components/design/RichTextEditor").then((m) => ({ default: m.RichTextEditor })),
@@ -220,6 +222,7 @@ export default function DesignPage() {
   const [previewLoading, setPreviewLoading] = useState(true);
   const [selectedBlocks, setSelectedBlocks] = useState<Set<string>>(new Set());
   const [previewDarkMode, setPreviewDarkMode] = useState(false);
+  const [previewDesignMode, setPreviewDesignMode] = useState(false);
   const [savedTemplates, setSavedTemplates] = useState<
     { id?: string; name: string; config: Record<string, unknown> }[]
   >([]);
@@ -227,6 +230,7 @@ export default function DesignPage() {
   const [templatesLoading, setTemplatesLoading] = useState(true);
   const [loadedTemplate, setLoadedTemplate] = useState<{ id?: string; name: string } | null>(null);
   const [blockSearch, setBlockSearch] = useState("");
+  const [selectedHeroComponent, setSelectedHeroComponent] = useState<HeroComponentType | null>(null);
   const [onboardingDismissed, setOnboardingDismissed] = useState(false);
   const autoSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const initialLoadRef = useRef(true);
@@ -838,16 +842,27 @@ export default function DesignPage() {
   function renderSettingsEditor(block: BuilderBlock) {
     if (block.type === "hero") {
       return (
-        <HeroBlockSettings
-          block={block}
-          updateBlockSettings={updateBlockSettings}
-          theme={{ primary: theme.primary, accent: theme.accent }}
-          newCarouselImage={newCarouselImage[block.id] ?? ""}
-          setNewCarouselImage={(v) => setNewCarouselImage((prev) => ({ ...prev, [block.id]: v }))}
-          addToStringList={addToStringList}
-          removeFromStringList={removeFromStringList}
-          FONT_OPTIONS={FONT_OPTIONS}
-        />
+        <div className="space-y-4">
+          <HeroDesignCanvas
+            block={block}
+            selectedComponent={selectedHeroComponent}
+            onSelectComponent={setSelectedHeroComponent}
+            onOrderChange={(order) => updateBlockSettings(block.id, { heroComponentOrder: order })}
+            theme={{ primary: theme.primary, accent: theme.accent }}
+          />
+          <HeroBlockSettings
+            block={block}
+            updateBlockSettings={updateBlockSettings}
+            theme={{ primary: theme.primary, accent: theme.accent }}
+            newCarouselImage={newCarouselImage[block.id] ?? ""}
+            setNewCarouselImage={(v) => setNewCarouselImage((prev) => ({ ...prev, [block.id]: v }))}
+            addToStringList={addToStringList}
+            removeFromStringList={removeFromStringList}
+            FONT_OPTIONS={FONT_OPTIONS}
+            selectedComponent={selectedHeroComponent}
+            onClearSelection={() => setSelectedHeroComponent(null)}
+          />
+        </div>
       );
     }
 
@@ -2887,32 +2902,34 @@ export default function DesignPage() {
                         isExpanded ? "ring-1 ring-zinc-400" : ""
                       }`}
                     >
-                      {/* Block header - always visible */}
+                      {/* Block header - always visible, whole row draggable */}
                       <div
-                        className="flex cursor-pointer items-center gap-3 p-4 transition-colors hover:bg-zinc-50/80"
-                        onClick={() => toggleBlockExpanded(block.id)}
+                        className={`flex cursor-pointer items-center gap-3 p-4 transition-colors hover:bg-zinc-50/80 ${
+                          !block.locked ? "cursor-grab active:cursor-grabbing" : ""
+                        }`}
+                        onClick={(e) => {
+                          if ((e.target as HTMLElement).closest("[data-no-drag]")) return;
+                          toggleBlockExpanded(block.id);
+                        }}
                         onKeyDown={(e) => {
                           if (e.key === "Enter" || e.key === " ") {
                             e.preventDefault();
                             toggleBlockExpanded(block.id);
                           }
                         }}
+                        {...(attributes as React.HTMLAttributes<HTMLDivElement>)}
+                        {...(block.locked ? {} : (listeners as React.HTMLAttributes<HTMLDivElement>))}
                         role="button"
                         tabIndex={0}
                         aria-expanded={isExpanded}
+                        title={block.locked ? undefined : "Drag to reorder · Click to expand"}
                       >
                         <div
-                          {...(attributes as React.HTMLAttributes<HTMLDivElement>)}
-                          {...(block.locked ? {} : (listeners as React.HTMLAttributes<HTMLDivElement>))}
-                          role="button"
-                          tabIndex={0}
-                          onClick={(e) => e.stopPropagation()}
+                          data-no-drag
                           className={`rounded p-1.5 text-zinc-500 ${
-                            block.locked
-                              ? "cursor-not-allowed opacity-60"
-                              : "cursor-grab touch-none hover:bg-zinc-200 hover:text-zinc-700 active:cursor-grabbing"
+                            block.locked ? "cursor-not-allowed opacity-60" : "opacity-70"
                           }`}
-                          title={block.locked ? "Block is locked" : "Drag to reorder"}
+                          title={block.locked ? "Block is locked" : "Drag handle"}
                         >
                           <GripVertical className="h-5 w-5" />
                         </div>
@@ -2950,7 +2967,12 @@ export default function DesignPage() {
                               </span>
                             )}
                           </div>
-                          <div className="mt-1 flex items-center gap-2">
+                          <div
+                            className="mt-1 flex items-center gap-2"
+                            onClick={(e) => e.stopPropagation()}
+                            onPointerDown={(e) => e.stopPropagation()}
+                            data-no-drag
+                          >
                             <span className="text-xs font-medium text-zinc-500">#</span>
                             <input
                               type="text"
@@ -2971,6 +2993,8 @@ export default function DesignPage() {
                         <div
                           className="flex items-center gap-2"
                           onClick={(e) => e.stopPropagation()}
+                          onPointerDown={(e) => e.stopPropagation()}
+                          data-no-drag
                         >
                           <label className="flex cursor-pointer items-center gap-1.5 text-sm font-medium text-zinc-700">
                             <input
@@ -3147,8 +3171,20 @@ export default function DesignPage() {
               aria-hidden={!previewDrawerOpen}
             >
               <div className="flex shrink-0 items-center justify-between border-b border-zinc-200 px-4 py-3">
-                <h2 className="text-sm font-semibold text-zinc-900">Live preview</h2>
+                <h2 className="text-sm font-semibold text-zinc-900">
+                  {previewDesignMode ? "Design preview" : "Live preview"}
+                </h2>
                 <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setPreviewDesignMode((d) => !d)}
+                    className={`rounded p-1.5 transition ${
+                      previewDesignMode ? "bg-indigo-100 text-indigo-700" : "bg-zinc-200 hover:bg-zinc-300 text-zinc-600"
+                    }`}
+                    title={previewDesignMode ? "Switch to live preview" : "Design mode — click elements to edit"}
+                  >
+                    <Layout className="h-4 w-4" />
+                  </button>
                   <button
                     type="button"
                     onClick={() => setPreviewDarkMode((d) => !d)}
@@ -3194,37 +3230,76 @@ export default function DesignPage() {
                 </div>
               </div>
               <div className="relative flex min-h-0 flex-1 flex-col items-center justify-center overflow-auto bg-zinc-100 p-4">
-                {previewLoading && (
-                  <div className="absolute inset-4 z-10 flex items-center justify-center rounded-lg bg-zinc-200/80">
-                    <div className="h-8 w-8 animate-spin rounded-full border-2 border-zinc-400 border-t-transparent" />
-                  </div>
+                {previewDesignMode ? (
+                  (() => {
+                    const expandedHero = siteConfig.blocks.find(
+                      (b) => b.type === "hero" && expandedBlocks.has(b.id)
+                    );
+                    const heroBlock = expandedHero ?? siteConfig.blocks.find((b) => b.type === "hero");
+                    if (!heroBlock) {
+                      return (
+                        <div className="rounded-lg border border-zinc-300 bg-white p-8 text-center text-zinc-500">
+                          <p className="text-sm">Add a Hero block to use design preview.</p>
+                          <p className="mt-2 text-xs">Expand a Hero block and click the Layout icon to switch to design mode.</p>
+                        </div>
+                      );
+                    }
+                    return (
+                      <div className="w-full max-w-full overflow-auto">
+                        <HeroDesignPreview
+                          block={heroBlock}
+                          selectedComponent={
+                            selectedHeroComponent === "ctas" ? "cta1" : (selectedHeroComponent as "badge" | "title" | "subtitle" | "avatar" | "cta1" | "cta2" | null)
+                          }
+                          onSelectComponent={(c) => setSelectedHeroComponent(c ?? null)}
+                          updateBlockSettings={updateBlockSettings}
+                          theme={{ primary: theme.primary, accent: theme.accent }}
+                          viewportWidth={
+                            previewViewport === "desktop"
+                              ? 640
+                              : previewViewport === "tablet"
+                                ? 480
+                                : 375
+                          }
+                        />
+                      </div>
+                    );
+                  })()
+                ) : (
+                  <>
+                    {previewLoading && (
+                      <div className="absolute inset-4 z-10 flex items-center justify-center rounded-lg bg-zinc-200/80">
+                        <div className="h-8 w-8 animate-spin rounded-full border-2 border-zinc-400 border-t-transparent" />
+                      </div>
+                    )}
+                    <div
+                      className="mx-auto w-full max-w-full overflow-hidden rounded-lg border border-zinc-300 bg-white shadow-lg"
+                      style={{
+                        width:
+                          previewViewport === "desktop"
+                            ? "100%"
+                            : previewViewport === "tablet"
+                              ? "768px"
+                              : "375px",
+                        aspectRatio:
+                          previewViewport === "desktop"
+                            ? "16/10"
+                            : previewViewport === "tablet"
+                              ? "768/500"
+                              : "375/667",
+                      }}
+                    >
+                      <iframe
+                        key={previewKey}
+                        src={previewUrl}
+                        title="Preview"
+                        className="h-full w-full border-0"
+                        sandbox="allow-scripts allow-same-origin"
+                        onLoad={() => setPreviewLoading(false)}
+                      />
+                    </div>
+                  </>
                 )}
-                <div
-                  className="mx-auto w-full max-w-full overflow-hidden rounded-lg border border-zinc-300 bg-white shadow-lg"
-                  style={{
-                    width:
-                      previewViewport === "desktop"
-                        ? "100%"
-                        : previewViewport === "tablet"
-                          ? "768px"
-                          : "375px",
-                    aspectRatio:
-                      previewViewport === "desktop"
-                        ? "16/10"
-                        : previewViewport === "tablet"
-                          ? "768/500"
-                          : "375/667",
-                  }}
-                >
-                  <iframe
-                    key={previewKey}
-                    src={previewUrl}
-                    title="Preview"
-                    className="h-full w-full border-0"
-                    sandbox="allow-scripts allow-same-origin"
-                    onLoad={() => setPreviewLoading(false)}
-                  />
-                </div>
               </div>
             </div>
           </>

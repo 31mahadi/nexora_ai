@@ -441,6 +441,7 @@ export function createBlock(type: BlockType): BuilderBlock {
         badgeBorderRadius: "pill",
         heroVideoAutoplay: true,
         subtitleDropCap: false,
+        heroComponentOrder: ["badge", "title", "subtitle", "avatar", "ctas"],
       },
     };
   }

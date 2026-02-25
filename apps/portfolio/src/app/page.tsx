@@ -3,7 +3,7 @@ import { headers } from "next/headers";
 import Image from "next/image";
 import Link from "next/link";
 import type { Metadata } from "next";
-import type { CSSProperties } from "react";
+import type { CSSProperties, ReactNode } from "react";
 import { AnalyticsScript } from "@/components/AnalyticsScript";
 import { ContactFormBlock } from "@/components/ContactFormBlock";
 import { NewsletterBlock } from "@/components/NewsletterBlock";
@@ -778,6 +778,12 @@ export default async function PortfolioPage() {
         return null;
       };
 
+      const heroComponentOrder = (Array.isArray(block.settings.heroComponentOrder)
+        ? block.settings.heroComponentOrder
+        : ["badge", "title", "subtitle", "avatar", "ctas"]
+      ).filter((id): id is string => typeof id === "string" && ["badge", "title", "subtitle", "avatar", "ctas"].includes(id)) as string[];
+      const effectiveOrder = heroComponentOrder.length > 0 ? heroComponentOrder : ["badge", "title", "subtitle", "avatar", "ctas"];
+
       const renderHeroContent = (hasDarkBg = false) => {
         const textColor = hasDarkBg ? "text-white" : "";
         const subtitleColor = hasDarkBg ? "text-zinc-100" : "text-zinc-600";
@@ -788,130 +794,127 @@ export default async function PortfolioPage() {
         const titleShadowStyle = hasDarkBg && titleTextShadow ? { textShadow: "0 2px 8px rgba(0,0,0,0.5)" } : undefined;
         const subtitleShadowStyle = hasDarkBg && subtitleTextShadow ? { textShadow: "0 2px 8px rgba(0,0,0,0.5)" } : undefined;
         const ctaWrapperClass = `flex ${ctaLayoutClass} ${ctaSpacingClass} ${ctaPositionClass} ${ctaFullWidthMobile ? "w-full flex-col sm:flex-row sm:w-auto [&>a]:w-full [&>a]:sm:w-auto" : ""}`;
-        return (
-          <>
-            {showAvatar && !isSplit && (
-              <div
-                className={`${spacing.badge} overflow-hidden shadow-lg ${avatarRadiusClass} ${avatarBorderWidth === "none" ? "" : avatarBorderWidthClass}`}
-                style={{
-                  ...avatarBorderStyle,
-                  width: avatarPx,
-                  height: avatarPx,
-                  marginLeft: heroLayout === "centered" || heroLayout === "center" ? "auto" : undefined,
-                  marginRight: heroLayout === "centered" || heroLayout === "center" ? "auto" : undefined,
-                }}
-              >
-                <Image
-                  src={avatarUrl!}
-                  alt=""
-                  width={avatarPx}
-                  height={avatarPx}
-                  className="h-full w-full object-cover"
-                  unoptimized={avatarUrl!.startsWith("data:")}
-                />
-              </div>
-            )}
-            {badgeVisible && (
-              <Badge
-                variant="success"
-                className={`${spacing.badge} ${badgeTypoClass} ${badgeSizeClass} ${badgeBorderRadiusClass} inline-flex items-center gap-1.5`}
-                style={getBadgeStyle()}
-              >
-                {badgeIcon !== "none" && getBadgeIcon()}
-                {displayBadgeText}
-              </Badge>
-            )}
-            <div className={spacing.title}>
-              <h1
-                className={`${titleSizeClassResolved} ${titleTypoClass} ${titleLineHeightClass} ${titleLetterSpacingClass} ${titleMaxWidthClass} ${textColor} flex flex-wrap items-baseline gap-x-2 ${titleAlignClass}`}
-                style={{
-                  ...(!hasDarkBg ? { color: "var(--portfolio-primary)" } : {}),
-                  ...getTitleFontSizeStyle(),
-                  ...titleShadowStyle,
-                }}
-              >
-                {titleUseHtml ? (
-                  <span dangerouslySetInnerHTML={{ __html: title }} />
-                ) : (
-                  title
-                )}
-              </h1>
-              {titleDecorativeAccent === "underline" && (
-                <div className="mt-2 h-px w-24 bg-current opacity-40" aria-hidden />
-              )}
-              {titleDecorativeAccent === "accent-line" && (
-                <div className="mt-2 h-1 w-16 rounded-full" style={{ backgroundColor: hasDarkBg ? "rgba(255,255,255,0.8)" : theme.accent }} aria-hidden />
-              )}
-            </div>
-            {ctaPositionVertical === "below-title" && (
-              <div className={`${spacing.cta} ${ctaWrapperClass}`}>
-                <a href={ctaHref} {...ctaLinkProps(ctaOpenNewTab)}>
-                  <Button
-                    variant={getCtaVariant(false)}
-                    className={`${getCtaButtonClass(false)} ${ctaTypoClass} inline-flex items-center`}
-                    style={{ ...getCtaButtonStyle(primaryCtaColor, ctaStyle, false), ...getCtaFontSizeTypoStyle(false) }}
-                  >
-                    {ctaText}
-                    {getCtaIcon(false)}
-                  </Button>
-                </a>
-                {cta2Text && (
-                  <a href={cta2Href} {...ctaLinkProps(cta2OpenNewTab)}>
-                    <Button
-                      variant={getCtaVariant(true)}
-                      className={`${getCtaButtonClass(true)} ${cta2TypoClass} inline-flex items-center`}
-                      style={{ ...getCtaButtonStyle(secondaryCtaColor, cta2Style, true), ...getCtaFontSizeTypoStyle(true) }}
-                    >
-                      {cta2Text}
-                      {getCtaIcon(true)}
-                    </Button>
-                  </a>
-                )}
-              </div>
-            )}
-            {titleSubtitleDivider && (
-              <hr className="my-4 w-16 border-current opacity-30" aria-hidden />
-            )}
-            <p
-              className={`${subtitleFontSize === "inherit" ? "text-xl" : ""} ${subtitleTypoClass} ${subtitleLineHeightClass} ${subtitleLetterSpacingClass} ${subtitleColor} ${subtitleWidthClass} ${subtitleAlignClass} ${subtitleLineClampClass} ${
-                ctaPositionVertical === "below-subtitle" ? spacing.subtitle : spacing.cta
-              } ${subtitleDropCap ? "first-letter:float-left first-letter:mr-2 first-letter:text-4xl first-letter:font-bold first-letter:leading-none" : ""}`}
+
+        const avatarEl = showAvatar && !isSplit && (
+          <div
+            key="avatar"
+            className={`${spacing.badge} overflow-hidden shadow-lg ${avatarRadiusClass} ${avatarBorderWidth === "none" ? "" : avatarBorderWidthClass}`}
+            style={{
+              ...avatarBorderStyle,
+              width: avatarPx,
+              height: avatarPx,
+              marginLeft: heroLayout === "centered" || heroLayout === "center" ? "auto" : undefined,
+              marginRight: heroLayout === "centered" || heroLayout === "center" ? "auto" : undefined,
+            }}
+          >
+            <Image
+              src={avatarUrl!}
+              alt=""
+              width={avatarPx}
+              height={avatarPx}
+              className="h-full w-full object-cover"
+              unoptimized={avatarUrl!.startsWith("data:")}
+            />
+          </div>
+        );
+        const badgeEl = badgeVisible && (
+          <Badge
+            key="badge"
+            variant="success"
+            className={`${spacing.badge} ${badgeTypoClass} ${badgeSizeClass} ${badgeBorderRadiusClass} inline-flex items-center gap-1.5`}
+            style={getBadgeStyle()}
+          >
+            {badgeIcon !== "none" && getBadgeIcon()}
+            {displayBadgeText}
+          </Badge>
+        );
+        const titleEl = (
+          <div key="title" className={spacing.title}>
+            <h1
+              className={`${titleSizeClassResolved} ${titleTypoClass} ${titleLineHeightClass} ${titleLetterSpacingClass} ${titleMaxWidthClass} ${textColor} flex flex-wrap items-baseline gap-x-2 ${titleAlignClass}`}
               style={{
-                ...(heroLayout === "left" || heroLayout === "right" ? { marginLeft: 0, marginRight: 0 } : {}),
-                ...getSubtitleFontSizeStyle(),
-                ...subtitleShadowStyle,
+                ...(!hasDarkBg ? { color: "var(--portfolio-primary)" } : {}),
+                ...getTitleFontSizeStyle(),
+                ...titleShadowStyle,
               }}
             >
-              {subtitle}
-            </p>
-            {ctaPositionVertical === "below-subtitle" && (
-            <div className={ctaWrapperClass}>
-              <a href={ctaHref} {...ctaLinkProps(ctaOpenNewTab)}>
+              {titleUseHtml ? (
+                <span dangerouslySetInnerHTML={{ __html: title }} />
+              ) : (
+                title
+              )}
+            </h1>
+            {titleDecorativeAccent === "underline" && (
+              <div className="mt-2 h-px w-24 bg-current opacity-40" aria-hidden />
+            )}
+            {titleDecorativeAccent === "accent-line" && (
+              <div className="mt-2 h-1 w-16 rounded-full" style={{ backgroundColor: hasDarkBg ? "rgba(255,255,255,0.8)" : theme.accent }} aria-hidden />
+            )}
+          </div>
+        );
+        const subtitleEl = (
+          <p
+            key="subtitle"
+            className={`${subtitleFontSize === "inherit" ? "text-xl" : ""} ${subtitleTypoClass} ${subtitleLineHeightClass} ${subtitleLetterSpacingClass} ${subtitleColor} ${subtitleWidthClass} ${subtitleAlignClass} ${subtitleLineClampClass} ${spacing.subtitle} ${subtitleDropCap ? "first-letter:float-left first-letter:mr-2 first-letter:text-4xl first-letter:font-bold first-letter:leading-none" : ""}`}
+            style={{
+              ...(heroLayout === "left" || heroLayout === "right" ? { marginLeft: 0, marginRight: 0 } : {}),
+              ...getSubtitleFontSizeStyle(),
+              ...subtitleShadowStyle,
+            }}
+          >
+            {subtitle}
+          </p>
+        );
+        const ctasEl = (
+          <div key="ctas" className={`${spacing.cta} ${ctaWrapperClass}`}>
+            <a href={ctaHref} {...ctaLinkProps(ctaOpenNewTab)}>
+              <Button
+                variant={getCtaVariant(false)}
+                className={`${getCtaButtonClass(false)} ${ctaTypoClass} inline-flex items-center`}
+                style={{ ...getCtaButtonStyle(primaryCtaColor, ctaStyle, false), ...getCtaFontSizeTypoStyle(false) }}
+              >
+                {ctaText}
+                {getCtaIcon(false)}
+              </Button>
+            </a>
+            {cta2Text && (
+              <a href={cta2Href} {...ctaLinkProps(cta2OpenNewTab)}>
                 <Button
-                  variant={getCtaVariant(false)}
-                  className={`${getCtaButtonClass(false)} ${ctaTypoClass} inline-flex items-center`}
-                  style={{ ...getCtaButtonStyle(primaryCtaColor, ctaStyle, false), ...getCtaFontSizeTypoStyle(false) }}
+                  variant={getCtaVariant(true)}
+                  className={`${getCtaButtonClass(true)} ${cta2TypoClass} inline-flex items-center`}
+                  style={{ ...getCtaButtonStyle(secondaryCtaColor, cta2Style, true), ...getCtaFontSizeTypoStyle(true) }}
                 >
-                  {ctaText}
-                  {getCtaIcon(false)}
+                  {cta2Text}
+                  {getCtaIcon(true)}
                 </Button>
               </a>
-              {cta2Text && (
-                <a href={cta2Href} {...ctaLinkProps(cta2OpenNewTab)}>
-                  <Button
-                    variant={getCtaVariant(true)}
-                    className={`${getCtaButtonClass(true)} ${cta2TypoClass} inline-flex items-center`}
-                    style={{ ...getCtaButtonStyle(secondaryCtaColor, cta2Style, true), ...getCtaFontSizeTypoStyle(true) }}
-                  >
-                    {cta2Text}
-                    {getCtaIcon(true)}
-                  </Button>
-                </a>
-              )}
-            </div>
             )}
-          </>
+          </div>
         );
+
+        const dividerEl = titleSubtitleDivider && (
+          <hr key="divider" className="my-4 w-16 border-current opacity-30" aria-hidden />
+        );
+
+        const orderForSplit = effectiveOrder.filter((id) => id !== "avatar");
+        const orderToUse = isSplit ? orderForSplit : effectiveOrder;
+
+        const elements: Record<string, ReactNode> = {
+          badge: badgeEl,
+          title: titleEl,
+          subtitle: subtitleEl,
+          avatar: avatarEl,
+          ctas: ctasEl,
+        };
+
+        const result: ReactNode[] = [];
+        for (let i = 0; i < orderToUse.length; i++) {
+          const id = orderToUse[i];
+          const el = elements[id];
+          if (el) result.push(el);
+          if (id === "title" && dividerEl) result.push(dividerEl);
+        }
+        return <>{result}</>;
       };
 
       const heroContainerStyle = style;
