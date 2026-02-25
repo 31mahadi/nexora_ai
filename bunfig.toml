@@ -1,0 +1,7 @@
+[install]
+# Isolated installs by default (like pnpm) to prevent phantom dependencies
+# linker = "isolated"
+
+[install.lockfile]
+# Use text-based lockfile for Turborepo prune compatibility (Bun 1.2+)
+save = true

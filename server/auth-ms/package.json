@@ -1,0 +1,32 @@
+{
+  "name": "auth-ms",
+  "version": "0.0.0",
+  "private": true,
+  "scripts": {
+    "build": "nest build",
+    "dev": "nest start --watch",
+    "start": "node dist/main",
+    "lint": "biome check ."
+  },
+  "dependencies": {
+    "@nexora/types": "workspace:*",
+    "@nexora/validation": "workspace:*",
+    "@nestjs/common": "^11.0.0",
+    "@nestjs/core": "^11.0.0",
+    "@nestjs/platform-express": "^11.0.0",
+    "@nestjs/config": "^3.3.0",
+    "@supabase/supabase-js": "^2.47.0",
+    "cookie-parser": "^1.4.6",
+    "ioredis": "^5.4.0",
+    "reflect-metadata": "^0.2.0",
+    "rxjs": "^7.8.0"
+  },
+  "devDependencies": {
+    "@nexora/config": "workspace:*",
+    "@nestjs/cli": "^11.0.0",
+    "@types/cookie-parser": "^1.4.7",
+    "@types/express": "^5.0.0",
+    "@types/node": "^22.0.0",
+    "typescript": "^5.7.0"
+  }
+}

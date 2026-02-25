@@ -1,0 +1,31 @@
+{
+  "name": "nexora",
+  "private": true,
+  "workspaces": [
+    "apps/*",
+    "packages/*",
+    "server/*"
+  ],
+  "scripts": {
+    "build": "turbo build --concurrency=1",
+    "dev": "turbo dev --concurrency 25",
+    "dev:apps": "turbo dev --filter=web --filter=admin --filter=portfolio --filter=super-admin --filter=api-gateway --filter=auth-ms --filter=tenant-ms --filter=portfolio-ms --filter=blog-ms --filter=timeline-ms --filter=subscription-ms --concurrency 10",
+    "seed:auth": "bun run ./infra/scripts/seed-auth-users.ts",
+    "lint": "biome check .",
+    "lint:fix": "biome check --write .",
+    "format": "biome format --write .",
+    "test": "turbo test",
+    "clean": "turbo clean && rm -rf node_modules",
+    "dev:kill": "for p in 3000 3001 3002 3003 3004 3005 3006 3007 3008 3009 3010 3011 3012 4000; do lsof -ti :$p | xargs kill -9 2>/dev/null; done"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "latest",
+    "turbo": "latest"
+  },
+  "packageManager": "bun@1.2.0",
+  "dependencies": {
+    "@tiptap/extension-link": "^3.20.0",
+    "@tiptap/react": "^3.20.0",
+    "@tiptap/starter-kit": "^3.20.0"
+  }
+}
