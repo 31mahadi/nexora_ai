@@ -18,7 +18,6 @@ import {
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import dynamic from "next/dynamic";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { FormEvent } from "react";
 import { toast } from "sonner";
@@ -75,11 +74,11 @@ import { BlockTypePreview } from "@/components/design/BlockTypePreview";
 import { HeroBlockSettings, type HeroComponentType } from "@/components/design/HeroBlockSettings";
 import { HeroDesignCanvas } from "@/components/design/HeroDesignCanvas";
 import { HeroDesignPreview } from "@/components/design/HeroDesignPreview";
+import { TextBlockSettings } from "@/components/design/TextBlockSettings";
+import { TextDesignPreview, type TextComponentType } from "@/components/design/TextDesignPreview";
+import { SkillsBlockSettings, type SkillsComponentType } from "@/components/design/SkillsBlockSettings";
+import { SkillsDesignPreview } from "@/components/design/SkillsDesignPreview";
 import { ImageField } from "@/components/design/ImageField";
-const RichTextEditor = dynamic(
-  () => import("@/components/design/RichTextEditor").then((m) => ({ default: m.RichTextEditor })),
-  { ssr: false, loading: () => <div className="h-24 animate-pulse rounded-lg bg-zinc-200" /> },
-);
 import {
   BLOCK_LIBRARY,
   BLOCK_PRESETS,
@@ -231,6 +230,8 @@ export default function DesignPage() {
   const [loadedTemplate, setLoadedTemplate] = useState<{ id?: string; name: string } | null>(null);
   const [blockSearch, setBlockSearch] = useState("");
   const [selectedHeroComponent, setSelectedHeroComponent] = useState<HeroComponentType | null>(null);
+  const [selectedTextComponent, setSelectedTextComponent] = useState<TextComponentType | null>(null);
+  const [selectedSkillsComponent, setSelectedSkillsComponent] = useState<SkillsComponentType | null>(null);
   const [onboardingDismissed, setOnboardingDismissed] = useState(false);
   const autoSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const initialLoadRef = useRef(true);
@@ -928,303 +929,27 @@ export default function DesignPage() {
 
     if (block.type === "text") {
       return (
-        <div className="space-y-3">
-          <p className="text-xs font-medium uppercase tracking-wide text-zinc-500">Content settings</p>
-          <Input
-            value={String(block.settings.title ?? "")}
-            onChange={(e) => updateBlockSettings(block.id, { title: e.target.value })}
-            placeholder="Section title"
-          />
-          <RichTextEditor
-            value={String(block.settings.body ?? "")}
-            onChange={(html) => updateBlockSettings(block.id, { body: html })}
-            placeholder="Write your content..."
-          />
-        </div>
+        <TextBlockSettings
+          block={block}
+          updateBlockSettings={updateBlockSettings}
+          theme={{ primary: theme.primary, accent: theme.accent }}
+          FONT_OPTIONS={FONT_OPTIONS}
+          selectedComponent={selectedTextComponent}
+          onClearSelection={() => setSelectedTextComponent(null)}
+        />
       );
     }
 
     if (block.type === "skills") {
-      const segments = Array.isArray(block.settings.segments)
-        ? (block.settings.segments as Array<{ name?: string; skills?: string[] }>)
-        : [];
-      const legacyItems = Array.isArray(block.settings.items)
-        ? (block.settings.items as Array<{ name?: string; category?: string }>)
-        : [];
-      const hasLegacy = legacyItems.length > 0 && segments.length === 0;
-      const displaySegments = hasLegacy
-        ? (() => {
-            const byCategory = new Map<string, string[]>();
-            for (const i of legacyItems) {
-              const cat = (i.category ?? "").trim() || "Skills";
-              if (!byCategory.has(cat)) byCategory.set(cat, []);
-              if ((i.name ?? "").trim()) byCategory.get(cat)!.push(i.name!.trim());
-            }
-            return Array.from(byCategory.entries()).map(([name, skills]) => ({ name, skills }));
-          })()
-        : segments;
       return (
-        <div className="space-y-3">
-          <p className="text-xs font-medium uppercase tracking-wide text-zinc-500">Content settings</p>
-          <Input
-            value={String(block.settings.title ?? "")}
-            onChange={(e) => updateBlockSettings(block.id, { title: e.target.value })}
-            placeholder="Section title"
-          />
-          <Input
-            value={String(block.settings.subtitle ?? "")}
-            onChange={(e) => updateBlockSettings(block.id, { subtitle: e.target.value })}
-            placeholder="Section subtitle (optional)"
-          />
-          <Input
-            value={String(block.settings.emptyMessage ?? "")}
-            onChange={(e) => updateBlockSettings(block.id, { emptyMessage: e.target.value })}
-            placeholder="Empty state message (optional)"
-          />
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            <div>
-              <p className="mb-1.5 text-xs font-medium text-zinc-600">Segment layout</p>
-              <select
-                value={String(block.settings.segmentLayout ?? "vertical")}
-                onChange={(e) =>
-                  updateBlockSettings(block.id, {
-                    segmentLayout: e.target.value as "vertical" | "horizontal",
-                  })
-                }
-                className="h-11 w-full rounded-lg border border-zinc-300 bg-white px-4 py-3 text-sm text-zinc-700 box-border"
-              >
-                <option value="vertical">Vertical (stacked)</option>
-                <option value="horizontal">Horizontal (side by side)</option>
-              </select>
-            </div>
-            <div>
-              <p className="mb-1.5 text-xs font-medium text-zinc-600">Segment grid columns</p>
-              <Input
-                type="number"
-                min={1}
-                max={6}
-                value={String(block.settings.segmentGridColumns ?? 2)}
-                onChange={(e) =>
-                  updateBlockSettings(block.id, {
-                    segmentGridColumns: Math.min(6, Math.max(1, Number(e.target.value) || 2)),
-                  })
-                }
-                placeholder="1–6"
-              />
-              <p className="mt-0.5 text-[10px] text-zinc-500">Columns when horizontal (1–6)</p>
-            </div>
-            <div>
-              <p className="mb-1.5 text-xs font-medium text-zinc-600">Skills grid columns</p>
-              <Input
-                type="number"
-                min={0}
-                max={6}
-                value={String(block.settings.skillsGridColumns ?? 0)}
-                onChange={(e) =>
-                  updateBlockSettings(block.id, {
-                    skillsGridColumns: Math.min(6, Math.max(0, Number(e.target.value) || 0)),
-                  })
-                }
-                placeholder="0 = auto"
-              />
-              <p className="mt-0.5 text-[10px] text-zinc-500">0 = flex wrap, 1–6 = grid</p>
-            </div>
-            <div>
-              <p className="mb-1.5 text-xs font-medium text-zinc-600">Segment alignment</p>
-              <select
-                value={String(block.settings.segmentAlign ?? "left")}
-                onChange={(e) =>
-                  updateBlockSettings(block.id, {
-                    segmentAlign: e.target.value as "left" | "center" | "right",
-                  })
-                }
-                className="h-11 w-full rounded-lg border border-zinc-300 bg-white px-4 py-3 text-sm text-zinc-700 box-border"
-              >
-                <option value="left">Left</option>
-                <option value="center">Center</option>
-                <option value="right">Right</option>
-              </select>
-            </div>
-            <div>
-              <p className="mb-1.5 text-xs font-medium text-zinc-600">Design style</p>
-              <select
-                value={String(block.settings.segmentDesign ?? "badges")}
-                onChange={(e) =>
-                  updateBlockSettings(block.id, {
-                    segmentDesign: e.target.value as "badges" | "pills" | "cards" | "list" | "compact",
-                  })
-                }
-                className="h-11 w-full rounded-lg border border-zinc-300 bg-white px-4 py-3 text-sm text-zinc-700 box-border"
-              >
-                <option value="badges">Badges</option>
-                <option value="pills">Pills</option>
-                <option value="cards">Cards</option>
-                <option value="list">List</option>
-                <option value="compact">Compact</option>
-              </select>
-            </div>
-            <div>
-              <p className="mb-1.5 text-xs font-medium text-zinc-600">Skill color</p>
-              <select
-                value={String(block.settings.skillColor ?? "accent")}
-                onChange={(e) =>
-                  updateBlockSettings(block.id, {
-                    skillColor: e.target.value as "primary" | "accent" | "neutral",
-                  })
-                }
-                className="h-11 w-full rounded-lg border border-zinc-300 bg-white px-4 py-3 text-sm text-zinc-700 box-border"
-              >
-                <option value="primary">Primary</option>
-                <option value="accent">Accent</option>
-                <option value="neutral">Neutral</option>
-              </select>
-            </div>
-            <div>
-              <p className="mb-1.5 text-xs font-medium text-zinc-600">Skill size</p>
-              <select
-                value={String(block.settings.skillSize ?? "md")}
-                onChange={(e) =>
-                  updateBlockSettings(block.id, {
-                    skillSize: e.target.value as "sm" | "md" | "lg",
-                  })
-                }
-                className="h-11 w-full rounded-lg border border-zinc-300 bg-white px-4 py-3 text-sm text-zinc-700 box-border"
-              >
-                <option value="sm">Small</option>
-                <option value="md">Medium</option>
-                <option value="lg">Large</option>
-              </select>
-            </div>
-            <div>
-              <p className="mb-1.5 text-xs font-medium text-zinc-600">Max skills per segment</p>
-              <Input
-                type="number"
-                min={0}
-                value={String(block.settings.maxSkillsPerSegment ?? 0)}
-                onChange={(e) =>
-                  updateBlockSettings(block.id, {
-                    maxSkillsPerSegment: Math.max(0, Number(e.target.value) || 0),
-                  })
-                }
-                placeholder="0 = no limit"
-              />
-            </div>
-          </div>
-          <p className="text-xs font-medium text-zinc-600">Segments (e.g. Frontend, Backend)</p>
-          <div className="space-y-4">
-            {displaySegments.map((seg, segIdx) => (
-              <div key={segIdx} className="rounded-lg border border-zinc-200 bg-zinc-50/50 p-3">
-                <div className="mb-2 flex items-center gap-2">
-                  <div className="flex flex-col gap-0.5">
-                    <Button
-                      type="button"
-                      variant="secondary"
-                      className="p-1"
-                      disabled={segIdx === 0}
-                      onClick={() => {
-                        const n = [...displaySegments];
-                        [n[segIdx - 1], n[segIdx]] = [n[segIdx], n[segIdx - 1]];
-                        updateBlockSettings(block.id, { segments: n, items: undefined });
-                      }}
-                    >
-                      <ArrowUp className="h-3 w-3" />
-                    </Button>
-                    <Button
-                      type="button"
-                      variant="secondary"
-                      className="p-1"
-                      disabled={segIdx === displaySegments.length - 1}
-                      onClick={() => {
-                        const n = [...displaySegments];
-                        [n[segIdx], n[segIdx + 1]] = [n[segIdx + 1], n[segIdx]];
-                        updateBlockSettings(block.id, { segments: n, items: undefined });
-                      }}
-                    >
-                      <ArrowDown className="h-3 w-3" />
-                    </Button>
-                  </div>
-                  <Input
-                    value={seg.name ?? ""}
-                    onChange={(e) => {
-                      const n = [...displaySegments];
-                      n[segIdx] = { ...n[segIdx], name: e.target.value };
-                      updateBlockSettings(block.id, { segments: n, items: undefined });
-                    }}
-                    placeholder="Segment name (e.g. Frontend)"
-                    className="flex-1 font-medium"
-                  />
-                  <Button
-                    type="button"
-                    variant="secondary"
-                    onClick={() => {
-                      const n = displaySegments.filter((_, i) => i !== segIdx);
-                      updateBlockSettings(block.id, { segments: n, items: undefined });
-                    }}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                </div>
-                <div className="space-y-2 pl-2">
-                  {(seg.skills ?? []).map((skill, skillIdx) => (
-                    <div key={skillIdx} className="flex gap-2">
-                      <Input
-                        value={skill}
-                        onChange={(e) => {
-                          const n = [...displaySegments];
-                          const skills = [...(n[segIdx].skills ?? [])];
-                          skills[skillIdx] = e.target.value;
-                          n[segIdx] = { ...n[segIdx], skills };
-                          updateBlockSettings(block.id, { segments: n, items: undefined });
-                        }}
-                        placeholder="Skill (e.g. React)"
-                        className="flex-1"
-                      />
-                      <Button
-                        type="button"
-                        variant="secondary"
-                        onClick={() => {
-                          const n = [...displaySegments];
-                          const skills = (n[segIdx].skills ?? []).filter((_, i) => i !== skillIdx);
-                          n[segIdx] = { ...n[segIdx], skills };
-                          updateBlockSettings(block.id, { segments: n });
-                        }}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  ))}
-                  <Button
-                    type="button"
-                    variant="secondary"
-                    className="px-3 py-1.5 text-sm"
-                    onClick={() => {
-                      const n = [...displaySegments];
-                      const skills = [...(n[segIdx].skills ?? []), ""];
-                      n[segIdx] = { ...n[segIdx], skills };
-                      updateBlockSettings(block.id, { segments: n, items: undefined });
-                    }}
-                  >
-                    <Plus className="h-3.5 w-3.5" />
-                    Add skill
-                  </Button>
-                </div>
-              </div>
-            ))}
-            <Button
-              type="button"
-              variant="secondary"
-              onClick={() =>
-                updateBlockSettings(block.id, {
-                  segments: [...displaySegments, { name: "", skills: [] }],
-                  items: undefined,
-                })
-              }
-            >
-              <Plus className="h-4 w-4" />
-              Add segment
-            </Button>
-          </div>
-        </div>
+        <SkillsBlockSettings
+          block={block}
+          updateBlockSettings={updateBlockSettings}
+          theme={{ primary: theme.primary, accent: theme.accent }}
+          FONT_OPTIONS={FONT_OPTIONS}
+          selectedComponent={selectedSkillsComponent}
+          onClearSelection={() => setSelectedSkillsComponent(null)}
+        />
       );
     }
 
@@ -2386,6 +2111,40 @@ export default function DesignPage() {
                   </option>
                 ))}
               </select>
+              <p
+                className={`mt-3 rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-2.5 text-sm text-zinc-700 ${
+                  (siteConfig.fontFamily ?? "inter") !== "inherit"
+                    ? `font-hero-${siteConfig.fontFamily ?? "inter"}`
+                    : ""
+                }`}
+              >
+                The quick brown fox jumps over the lazy dog.
+              </p>
+              <button
+                type="button"
+                onClick={() => {
+                  setSiteConfig((prev) => ({
+                    ...prev,
+                    blocks: prev.blocks.map((b) => {
+                      const patch: Record<string, unknown> = {};
+                      if (b.type === "hero" && "heroFontFamily" in (b.settings ?? {}))
+                        patch.heroFontFamily = "inherit";
+                      if (b.type === "text") {
+                        patch.textFontFamily = "inherit";
+                        patch.titleFontFamily = "inherit";
+                        patch.subtitleFontFamily = "inherit";
+                        patch.bodyFontFamily = "inherit";
+                      }
+                      return Object.keys(patch).length
+                        ? { ...b, settings: { ...b.settings, ...patch } }
+                        : b;
+                    }),
+                  }));
+                }}
+                className="mt-2 text-xs text-indigo-600 hover:text-indigo-700"
+              >
+                Apply to all blocks
+              </button>
             </Card>
 
             <Card variant="outlined" className="border-zinc-200 p-5">
@@ -3170,11 +2929,27 @@ export default function DesignPage() {
               }`}
               aria-hidden={!previewDrawerOpen}
             >
-              <div className="flex shrink-0 items-center justify-between border-b border-zinc-200 px-4 py-3">
-                <h2 className="text-sm font-semibold text-zinc-900">
+              <div className="flex shrink-0 items-center justify-between gap-3 border-b border-zinc-200 px-4 py-3">
+                <h2 className="text-sm font-semibold text-zinc-900 shrink-0">
                   {previewDesignMode ? "Design preview" : "Live preview"}
                 </h2>
-                <div className="flex items-center gap-2">
+                {previewDesignMode && (
+                  <select
+                    value={siteConfig.fontFamily ?? "inter"}
+                    onChange={(e) =>
+                      setSiteConfig((prev) => ({ ...prev, fontFamily: e.target.value }))
+                    }
+                    className="h-8 rounded border border-zinc-300 bg-white px-2.5 text-xs text-zinc-700"
+                    title="Site font"
+                  >
+                    {FONT_OPTIONS.map((f) => (
+                      <option key={f.value} value={f.value}>
+                        {f.label}
+                      </option>
+                    ))}
+                  </select>
+                )}
+                <div className="flex items-center gap-2 shrink-0">
                   <button
                     type="button"
                     onClick={() => setPreviewDesignMode((d) => !d)}
@@ -3229,39 +3004,154 @@ export default function DesignPage() {
                   </button>
                 </div>
               </div>
-              <div className="relative flex min-h-0 flex-1 flex-col items-center justify-center overflow-auto bg-zinc-100 p-4">
+              <div
+                className={`relative flex min-h-0 flex-1 flex-col items-center justify-center overflow-auto bg-zinc-100 p-4 ${previewDesignMode && (siteConfig.fontFamily ?? "inter") !== "inherit" ? `font-hero-${siteConfig.fontFamily ?? "inter"}` : ""}`}
+              >
                 {previewDesignMode ? (
                   (() => {
+                    const expandedText = siteConfig.blocks.find(
+                      (b) => b.type === "text" && expandedBlocks.has(b.id)
+                    );
                     const expandedHero = siteConfig.blocks.find(
                       (b) => b.type === "hero" && expandedBlocks.has(b.id)
                     );
+                    const expandedSkills = siteConfig.blocks.find(
+                      (b) => b.type === "skills" && expandedBlocks.has(b.id)
+                    );
+                    const textBlock = expandedText ?? siteConfig.blocks.find((b) => b.type === "text");
                     const heroBlock = expandedHero ?? siteConfig.blocks.find((b) => b.type === "hero");
-                    if (!heroBlock) {
+                    const skillsBlock = expandedSkills ?? siteConfig.blocks.find((b) => b.type === "skills");
+
+                    if (expandedText && textBlock) {
                       return (
-                        <div className="rounded-lg border border-zinc-300 bg-white p-8 text-center text-zinc-500">
-                          <p className="text-sm">Add a Hero block to use design preview.</p>
-                          <p className="mt-2 text-xs">Expand a Hero block and click the Layout icon to switch to design mode.</p>
+                        <div className="w-full max-w-full overflow-auto">
+                          <TextDesignPreview
+                            block={textBlock}
+                            selectedComponent={selectedTextComponent}
+                            onSelectComponent={(c) => setSelectedTextComponent(c ?? null)}
+                            updateBlockSettings={updateBlockSettings}
+                            theme={{ primary: theme.primary, accent: theme.accent }}
+                            FONT_OPTIONS={FONT_OPTIONS}
+                            viewportWidth={
+                              previewViewport === "desktop"
+                                ? 640
+                                : previewViewport === "tablet"
+                                  ? 480
+                                  : 375
+                            }
+                          />
+                        </div>
+                      );
+                    }
+                    if (expandedHero && heroBlock) {
+                      return (
+                        <div className="w-full max-w-full overflow-auto">
+                          <HeroDesignPreview
+                            block={heroBlock}
+                            selectedComponent={
+                              selectedHeroComponent === "ctas" ? "cta1" : (selectedHeroComponent as "badge" | "title" | "subtitle" | "avatar" | "cta1" | "cta2" | null)
+                            }
+                            onSelectComponent={(c) => setSelectedHeroComponent(c ?? null)}
+                            updateBlockSettings={updateBlockSettings}
+                            theme={{ primary: theme.primary, accent: theme.accent }}
+                            viewportWidth={
+                              previewViewport === "desktop"
+                                ? 640
+                                : previewViewport === "tablet"
+                                  ? 480
+                                  : 375
+                            }
+                          />
+                        </div>
+                      );
+                    }
+                    if (expandedSkills && skillsBlock) {
+                      return (
+                        <div className="w-full max-w-full overflow-auto">
+                          <SkillsDesignPreview
+                            block={skillsBlock}
+                            selectedComponent={selectedSkillsComponent}
+                            onSelectComponent={(c) => setSelectedSkillsComponent(c ?? null)}
+                            updateBlockSettings={updateBlockSettings}
+                            theme={{ primary: theme.primary, accent: theme.accent }}
+                            viewportWidth={
+                              previewViewport === "desktop"
+                                ? 640
+                                : previewViewport === "tablet"
+                                  ? 480
+                                  : 375
+                            }
+                          />
+                        </div>
+                      );
+                    }
+                    if (textBlock) {
+                      return (
+                        <div className="w-full max-w-full overflow-auto">
+                          <TextDesignPreview
+                            block={textBlock}
+                            selectedComponent={selectedTextComponent}
+                            onSelectComponent={(c) => setSelectedTextComponent(c ?? null)}
+                            updateBlockSettings={updateBlockSettings}
+                            theme={{ primary: theme.primary, accent: theme.accent }}
+                            FONT_OPTIONS={FONT_OPTIONS}
+                            viewportWidth={
+                              previewViewport === "desktop"
+                                ? 640
+                                : previewViewport === "tablet"
+                                  ? 480
+                                  : 375
+                            }
+                          />
+                        </div>
+                      );
+                    }
+                    if (heroBlock) {
+                      return (
+                        <div className="w-full max-w-full overflow-auto">
+                          <HeroDesignPreview
+                            block={heroBlock}
+                            selectedComponent={
+                              selectedHeroComponent === "ctas" ? "cta1" : (selectedHeroComponent as "badge" | "title" | "subtitle" | "avatar" | "cta1" | "cta2" | null)
+                            }
+                            onSelectComponent={(c) => setSelectedHeroComponent(c ?? null)}
+                            updateBlockSettings={updateBlockSettings}
+                            theme={{ primary: theme.primary, accent: theme.accent }}
+                            viewportWidth={
+                              previewViewport === "desktop"
+                                ? 640
+                                : previewViewport === "tablet"
+                                  ? 480
+                                  : 375
+                            }
+                          />
+                        </div>
+                      );
+                    }
+                    if (skillsBlock) {
+                      return (
+                        <div className="w-full max-w-full overflow-auto">
+                          <SkillsDesignPreview
+                            block={skillsBlock}
+                            selectedComponent={selectedSkillsComponent}
+                            onSelectComponent={(c) => setSelectedSkillsComponent(c ?? null)}
+                            updateBlockSettings={updateBlockSettings}
+                            theme={{ primary: theme.primary, accent: theme.accent }}
+                            viewportWidth={
+                              previewViewport === "desktop"
+                                ? 640
+                                : previewViewport === "tablet"
+                                  ? 480
+                                  : 375
+                            }
+                          />
                         </div>
                       );
                     }
                     return (
-                      <div className="w-full max-w-full overflow-auto">
-                        <HeroDesignPreview
-                          block={heroBlock}
-                          selectedComponent={
-                            selectedHeroComponent === "ctas" ? "cta1" : (selectedHeroComponent as "badge" | "title" | "subtitle" | "avatar" | "cta1" | "cta2" | null)
-                          }
-                          onSelectComponent={(c) => setSelectedHeroComponent(c ?? null)}
-                          updateBlockSettings={updateBlockSettings}
-                          theme={{ primary: theme.primary, accent: theme.accent }}
-                          viewportWidth={
-                            previewViewport === "desktop"
-                              ? 640
-                              : previewViewport === "tablet"
-                                ? 480
-                                : 375
-                          }
-                        />
+                      <div className="rounded-lg border border-zinc-300 bg-white p-8 text-center text-zinc-500">
+                        <p className="text-sm">Add a Hero, Text, or Skills block to use design preview.</p>
+                        <p className="mt-2 text-xs">Expand a block and click the Layout icon to switch to design mode.</p>
                       </div>
                     );
                   })()

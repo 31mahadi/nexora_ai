@@ -18,11 +18,13 @@ import {
   getBlockDividerClass,
   getBlockAnimationClass,
   parsePortfolioSiteConfig,
+  SEGMENT_ICON_MAP,
   type BuilderBlock,
 } from "@nexora/portfolio-builder";
 
 const API_BASE = process.env.API_BASE_URL ?? "http://localhost:4000";
 const BLOG_MS = process.env.BLOG_MS_URL ?? "http://localhost:3007";
+const TENANT_MS = process.env.TENANT_MS_URL ?? "http://localhost:3005";
 const DEFAULT_PRIMARY = "#0f172a";
 const DEFAULT_ACCENT = "#6366f1";
 
@@ -178,10 +180,24 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 function sectionId(block: BuilderBlock): string {
-  if (block.sectionId && /^[a-z0-9-]+$/i.test(block.sectionId)) {
-    return block.sectionId;
+  const sid = block.sectionId ?? (block.settings?.sectionId as string | undefined);
+  if (sid && /^[a-z0-9-]+$/i.test(sid)) {
+    return sid;
   }
   return `block-${block.id}`;
+}
+
+async function fetchSiteConfig(tenantId: string): Promise<{ theme?: unknown; settings?: unknown } | null> {
+  try {
+    const res = await fetch(`${TENANT_MS}/tenants/site-config`, {
+      headers: { "X-Tenant-Id": tenantId },
+      cache: "no-store",
+    });
+    if (!res.ok) return null;
+    return (await res.json()) as { theme?: unknown; settings?: unknown };
+  } catch {
+    return null;
+  }
 }
 
 export default async function PortfolioPage() {
@@ -190,8 +206,26 @@ export default async function PortfolioPage() {
   const tenantName = h.get("x-tenant-name");
   const themeHeader = h.get("x-tenant-theme");
   const settingsHeader = h.get("x-tenant-settings");
-  const theme = parseTheme(themeHeader);
-  const siteConfig = parsePortfolioSiteConfig(settingsHeader);
+  const resolveStatus = h.get("x-tenant-resolve-status");
+
+  let siteConfig = parsePortfolioSiteConfig(settingsHeader);
+  let theme = parseTheme(themeHeader);
+
+  if (tenantId) {
+    const fetched = await fetchSiteConfig(tenantId);
+    if (fetched) {
+      siteConfig = parsePortfolioSiteConfig(
+        fetched.settings ? JSON.stringify(fetched.settings) : null,
+      );
+      if (fetched.theme && typeof fetched.theme === "object") {
+        const t = fetched.theme as { primary?: string; accent?: string };
+        theme = {
+          primary: t.primary ?? "#0f172a",
+          accent: t.accent ?? "#6366f1",
+        };
+      }
+    }
+  }
 
   let portfolioData: Awaited<ReturnType<typeof fetchPortfolio>> = null;
   let timeline: Awaited<ReturnType<typeof fetchTimeline>> = [];
@@ -1137,23 +1171,380 @@ export default async function PortfolioPage() {
 
     if (block.type === "text") {
       const subtitle = String(block.settings.subtitle ?? "");
+      const subtitleVisible = Boolean(block.settings.subtitleVisible ?? true);
+      const subtitleUseHtml = Boolean(block.settings.subtitleUseHtml ?? false);
+      const subtitlePosition = String(block.settings.subtitlePosition ?? "below");
+      const titleUseHtml = Boolean(block.settings.titleUseHtml ?? false);
+      const titleHeadingLevel = String(block.settings.titleHeadingLevel ?? "h2");
+      const titleTextTransform = String(block.settings.titleTextTransform ?? "none");
       const body = String(block.settings.body ?? "Add your content from the admin builder.");
       const isHtml = body.startsWith("<");
+      const textLayout = String(block.settings.textLayout ?? "left");
+      const textLayoutColumns = String(block.settings.textLayoutColumns ?? "single");
+      const titleAlign = String(block.settings.titleAlign ?? "inherit");
+      const subtitleAlign = String(block.settings.subtitleAlign ?? "inherit");
+      const textContentMaxWidth = String(block.settings.textContentMaxWidth ?? "medium");
+      const textCardStyle = String(block.settings.textCardStyle ?? "bordered");
+      const textContentPadding = String(block.settings.textContentPadding ?? "md");
+      const titleSubtitleDivider = String(block.settings.titleSubtitleDivider ?? "none");
+      const titleSubtitleDividerStyle = String(block.settings.titleSubtitleDividerStyle ?? "line");
+      const titleSubtitleDividerColor = String(block.settings.titleSubtitleDividerColor ?? "inherit");
+      const titleSubtitleDividerWidth = String(block.settings.titleSubtitleDividerWidth ?? "short");
+      const ctaText = String(block.settings.ctaText ?? "").trim();
+      const ctaHref = String(block.settings.ctaHref ?? "").trim();
+      const ctaColor = String(block.settings.ctaColor ?? "accent");
+      const ctaCustomColor = String(block.settings.ctaCustomColor ?? "").trim() || theme.accent;
+      const ctaStyle = String(block.settings.ctaStyle ?? "primary");
+      const ctaTextColor = String(block.settings.ctaTextColor ?? "auto");
+      const ctaTextCustomColor = String(block.settings.ctaTextCustomColor ?? "").trim() || "#ffffff";
+      const ctaBorderWidth = String(block.settings.ctaBorderWidth ?? "medium");
+      const ctaBorderRadius = String(block.settings.ctaBorderRadius ?? "md");
+      const ctaSize = String(block.settings.ctaSize ?? "normal");
+      const ctaFontSize = String(block.settings.ctaFontSize ?? "md");
+
+      const textFontFamily = String(block.settings.textFontFamily ?? "inherit");
+      const textFontSize = String(block.settings.textFontSize ?? "normal");
+      const textFontWeight = String(block.settings.textFontWeight ?? "normal");
+      const blockFontClass =
+        textFontFamily !== "inherit" ? `font-hero-${textFontFamily}` : "";
+      const blockSizeClass =
+        textFontSize === "small" ? "text-[87.5%]" : textFontSize === "large" ? "text-[112.5%]" : "";
+      const blockWeightClass =
+        textFontWeight === "medium"
+          ? "font-medium"
+          : textFontWeight === "semibold"
+            ? "font-semibold"
+            : textFontWeight === "bold"
+              ? "font-bold"
+              : "font-normal";
+      const blockTypoClass = [blockFontClass, blockSizeClass, blockWeightClass].filter(Boolean).join(" ");
+
+      const titleFontFamily = String(block.settings.titleFontFamily ?? "inherit");
+      const titleFontSize = String(block.settings.titleFontSize ?? "inherit");
+      const titleFontWeight = String(block.settings.titleFontWeight ?? "inherit");
+      const titleColor = String(block.settings.titleColor ?? "inherit");
+      const titleCustomColor = String(block.settings.titleCustomColor ?? "#18181b");
+      const titleLineHeight = String(block.settings.titleLineHeight ?? "normal");
+      const titleLetterSpacing = String(block.settings.titleLetterSpacing ?? "normal");
+      const titleFontClass =
+        (titleFontFamily === "inherit" ? textFontFamily : titleFontFamily) !== "inherit"
+          ? `font-hero-${titleFontFamily === "inherit" ? textFontFamily : titleFontFamily}`
+          : "";
+      const titleSizeMap: Record<string, string> = {
+        "2xl": "text-2xl",
+        "3xl": "text-3xl",
+        "4xl": "text-4xl",
+        "5xl": "text-5xl",
+      };
+      const titleFontSizeCustom = String(block.settings.titleFontSizeCustom ?? "3");
+      const titleSizeClass =
+        titleFontSize === "inherit" ? "" : titleFontSize === "custom" ? "" : titleSizeMap[titleFontSize] ?? "text-3xl";
+      const titleSizeStyle =
+        titleFontSize === "custom"
+          ? ({ fontSize: `${Math.max(0.5, Math.min(8, parseFloat(titleFontSizeCustom) || 3))}rem` } as CSSProperties)
+          : undefined;
+      const titleWeightClass =
+        (titleFontWeight === "inherit" ? textFontWeight : titleFontWeight) === "medium"
+          ? "font-medium"
+          : (titleFontWeight === "inherit" ? textFontWeight : titleFontWeight) === "semibold"
+            ? "font-semibold"
+            : (titleFontWeight === "inherit" ? textFontWeight : titleFontWeight) === "bold"
+              ? "font-bold"
+              : "font-normal";
+      const titleLineClass =
+        titleLineHeight === "tight" ? "leading-tight" : titleLineHeight === "relaxed" ? "leading-relaxed" : "leading-normal";
+      const titleLetterClass =
+        titleLetterSpacing === "tight" ? "tracking-tight" : titleLetterSpacing === "wide" ? "tracking-wide" : "tracking-normal";
+      const titleColorStyle =
+        titleColor === "inherit"
+          ? undefined
+          : titleColor === "primary"
+            ? ({ color: theme.primary } as CSSProperties)
+            : titleColor === "accent"
+              ? ({ color: theme.accent } as CSSProperties)
+              : titleColor === "custom"
+                ? ({ color: /^#[0-9A-Fa-f]{6}$/.test(titleCustomColor) ? titleCustomColor : "#18181b" } as CSSProperties)
+                : undefined;
+
+      const subtitleFontFamily = String(block.settings.subtitleFontFamily ?? "inherit");
+      const subtitleFontSize = String(block.settings.subtitleFontSize ?? "inherit");
+      const subtitleFontWeight = String(block.settings.subtitleFontWeight ?? "inherit");
+      const subtitleColor = String(block.settings.subtitleColor ?? "inherit");
+      const subtitleCustomColor = String(block.settings.subtitleCustomColor ?? "#52525b");
+      const subtitleLineHeight = String(block.settings.subtitleLineHeight ?? "normal");
+      const subtitleLetterSpacing = String(block.settings.subtitleLetterSpacing ?? "normal");
+      const subtitleFontClass =
+        (subtitleFontFamily === "inherit" ? textFontFamily : subtitleFontFamily) !== "inherit"
+          ? `font-hero-${subtitleFontFamily === "inherit" ? textFontFamily : subtitleFontFamily}`
+          : "";
+      const subtitleSizeMap: Record<string, string> = {
+        sm: "text-sm",
+        base: "text-base",
+        lg: "text-lg",
+        xl: "text-xl",
+      };
+      const subtitleFontSizeCustom = String(block.settings.subtitleFontSizeCustom ?? "1.25");
+      const subtitleSizeClass =
+        subtitleFontSize === "inherit" ? "text-xl" : subtitleFontSize === "custom" ? "" : subtitleSizeMap[subtitleFontSize] ?? "text-xl";
+      const subtitleSizeStyle =
+        subtitleFontSize === "custom"
+          ? ({ fontSize: `${Math.max(0.5, Math.min(4, parseFloat(subtitleFontSizeCustom) || 1.25))}rem` } as CSSProperties)
+          : undefined;
+      const subtitleWeightClass =
+        (subtitleFontWeight === "inherit" ? textFontWeight : subtitleFontWeight) === "medium"
+          ? "font-medium"
+          : (subtitleFontWeight === "inherit" ? textFontWeight : subtitleFontWeight) === "semibold"
+            ? "font-semibold"
+            : (subtitleFontWeight === "inherit" ? textFontWeight : subtitleFontWeight) === "bold"
+              ? "font-bold"
+              : "font-normal";
+      const subtitleLineClass =
+        subtitleLineHeight === "tight" ? "leading-tight" : subtitleLineHeight === "relaxed" ? "leading-relaxed" : "leading-normal";
+      const subtitleLetterClass =
+        subtitleLetterSpacing === "tight" ? "tracking-tight" : subtitleLetterSpacing === "wide" ? "tracking-wide" : "tracking-normal";
+      const subtitleColorStyle =
+        subtitleColor === "inherit"
+          ? undefined
+          : subtitleColor === "primary"
+            ? ({ color: theme.primary } as CSSProperties)
+            : subtitleColor === "accent"
+              ? ({ color: theme.accent } as CSSProperties)
+              : subtitleColor === "custom"
+                ? ({ color: /^#[0-9A-Fa-f]{6}$/.test(subtitleCustomColor) ? subtitleCustomColor : "#52525b" } as CSSProperties)
+                : undefined;
+
+      const bodyFontFamily = String(block.settings.bodyFontFamily ?? "inherit");
+      const bodyFontSize = String(block.settings.bodyFontSize ?? "inherit");
+      const bodyFontWeight = String(block.settings.bodyFontWeight ?? "inherit");
+      const bodyColor = String(block.settings.bodyColor ?? "inherit");
+      const bodyCustomColor = String(block.settings.bodyCustomColor ?? "#3f3f46");
+      const bodyLineHeight = String(block.settings.bodyLineHeight ?? "normal");
+      const bodyLetterSpacing = String(block.settings.bodyLetterSpacing ?? "normal");
+      const bodyLetterClass =
+        bodyLetterSpacing === "tight" ? "tracking-tight" : bodyLetterSpacing === "wide" ? "tracking-wide" : "tracking-normal";
+      const bodyFontClass =
+        (bodyFontFamily === "inherit" ? textFontFamily : bodyFontFamily) !== "inherit"
+          ? `font-hero-${bodyFontFamily === "inherit" ? textFontFamily : bodyFontFamily}`
+          : "";
+      const bodySizeMap: Record<string, string> = {
+        sm: "text-sm",
+        base: "text-base",
+        lg: "text-lg",
+      };
+      const bodyFontSizeCustom = String(block.settings.bodyFontSizeCustom ?? "1");
+      const bodySizeClass =
+        bodyFontSize === "inherit" ? "text-base" : bodyFontSize === "custom" ? "" : bodySizeMap[bodyFontSize] ?? "text-base";
+      const bodySizeStyle =
+        bodyFontSize === "custom"
+          ? ({ fontSize: `${Math.max(0.5, Math.min(2, parseFloat(bodyFontSizeCustom) || 1))}rem` } as CSSProperties)
+          : undefined;
+      const bodyProseSize = String(block.settings.bodyProseSize ?? "sm");
+      const bodyLinkColor = String(block.settings.bodyLinkColor ?? "accent");
+      const bodyLinkCustomColor = String(block.settings.bodyLinkCustomColor ?? "#6366f1");
+      const proseSizeClass =
+        bodyProseSize === "base" ? "prose" : bodyProseSize === "lg" ? "prose-lg" : "prose-sm";
+      const proseLinkColor =
+        bodyLinkColor === "inherit"
+          ? "currentColor"
+          : bodyLinkColor === "primary"
+            ? theme.primary
+            : bodyLinkColor === "custom" && /^#[0-9A-Fa-f]{6}$/.test(bodyLinkCustomColor)
+              ? bodyLinkCustomColor
+              : theme.accent;
+      const bodyWeightClass =
+        (bodyFontWeight === "inherit" ? textFontWeight : bodyFontWeight) === "medium"
+          ? "font-medium"
+          : (bodyFontWeight === "inherit" ? textFontWeight : bodyFontWeight) === "semibold"
+            ? "font-semibold"
+            : (bodyFontWeight === "inherit" ? textFontWeight : bodyFontWeight) === "bold"
+              ? "font-bold"
+              : "font-normal";
+      const bodyLineClass =
+        bodyLineHeight === "tight" ? "leading-tight" : bodyLineHeight === "relaxed" ? "leading-relaxed" : "leading-normal";
+      const titleTransformClass =
+        titleTextTransform === "uppercase" ? "uppercase" : titleTextTransform === "lowercase" ? "lowercase" : titleTextTransform === "capitalize" ? "capitalize" : "";
+      const bodyColorStyle =
+        bodyColor === "inherit"
+          ? undefined
+          : bodyColor === "primary"
+            ? ({ color: theme.primary } as CSSProperties)
+            : bodyColor === "accent"
+              ? ({ color: theme.accent } as CSSProperties)
+              : bodyColor === "custom"
+                ? ({ color: /^#[0-9A-Fa-f]{6}$/.test(bodyCustomColor) ? bodyCustomColor : "#3f3f46" } as CSSProperties)
+                : undefined;
+
+      const layoutClass =
+        textLayout === "center"
+          ? "text-center"
+          : textLayout === "right"
+            ? "text-right"
+            : "text-left";
+      const titleAlignClass =
+        titleAlign === "inherit"
+          ? ""
+          : titleAlign === "center"
+            ? "text-center"
+            : titleAlign === "right"
+              ? "text-right"
+              : "text-left";
+      const subtitleAlignClass =
+        subtitleAlign === "inherit"
+          ? ""
+          : subtitleAlign === "center"
+            ? "text-center"
+            : subtitleAlign === "right"
+              ? "text-right"
+              : "text-left";
+      const maxWidthClass =
+        textContentMaxWidth === "narrow"
+          ? "max-w-2xl"
+          : textContentMaxWidth === "wide"
+            ? "max-w-4xl"
+            : textContentMaxWidth === "full"
+              ? "max-w-none"
+              : "max-w-3xl";
+      const cardVariant =
+        textCardStyle === "none"
+          ? "none"
+          : textCardStyle === "elevated"
+            ? "elevated"
+            : textCardStyle === "filled"
+              ? "filled"
+              : "outlined";
+      const cardPaddingClass =
+        textContentPadding === "sm"
+          ? "p-4"
+          : textContentPadding === "lg"
+            ? "p-8"
+            : "p-6";
+
+      const TitleTag = titleHeadingLevel === "h1" ? "h1" : titleHeadingLevel === "h3" ? "h3" : "h2";
+      const dividerColor =
+        titleSubtitleDividerColor === "primary"
+          ? theme.primary
+          : titleSubtitleDividerColor === "accent"
+            ? theme.accent
+            : "currentColor";
+      const dividerOpacity = titleSubtitleDividerColor === "inherit" ? 0.3 : 1;
+      const dividerEl =
+        titleSubtitleDivider !== "none" ? (
+          titleSubtitleDivider === "dot" ? (
+            <div
+              key="divider"
+              className={`my-4 h-1.5 w-1.5 rounded-full ${layoutClass === "text-center" ? "mx-auto" : layoutClass === "text-right" ? "ml-auto" : ""}`}
+              style={{ backgroundColor: dividerColor, opacity: dividerOpacity }}
+              aria-hidden
+            />
+          ) : (
+            <div
+              key="divider"
+              className={`my-4 ${
+                titleSubtitleDividerWidth === "full"
+                  ? "w-full"
+                  : titleSubtitleDividerWidth === "medium"
+                    ? "w-24"
+                    : "w-16"
+              } ${layoutClass === "text-center" ? "mx-auto" : layoutClass === "text-right" ? "ml-auto" : ""}`}
+              style={{
+                borderColor: dividerColor,
+                borderTopWidth: 2,
+                borderTopStyle:
+                  titleSubtitleDividerStyle === "dotted"
+                    ? "dotted"
+                    : titleSubtitleDividerStyle === "dashed"
+                      ? "dashed"
+                      : "solid",
+                opacity: dividerOpacity,
+              }}
+              aria-hidden
+            />
+          )
+        ) : null;
+
       return (
         <section id={sectionId(block)} className={sectionClass} style={getBlockSectionStyle(block.style)}>
-          <div className={containerClass} style={style}>
-            <h2 className="mb-4 text-3xl font-bold">{String(block.settings.title ?? "Section")}</h2>
-            {subtitle && <p className="mb-4 text-zinc-600">{subtitle}</p>}
-            <Card variant="outlined" className="border-zinc-200 bg-white/70">
-              {isHtml ? (
-                <div
-                  className="prose prose-sm max-w-none text-zinc-700 prose-a:text-indigo-600"
-                  dangerouslySetInnerHTML={{ __html: body }}
-                />
+          <div className={`${containerClass} ${layoutClass} ${blockTypoClass}`} style={style}>
+            {subtitlePosition === "above" && subtitleVisible && subtitle && (
+              <p
+                className={`mb-2 ${subtitleSizeClass || "text-xl"} ${subtitleWeightClass} ${subtitleFontClass} ${subtitleLineClass} ${subtitleLetterClass} ${subtitleColor === "inherit" ? "text-zinc-600" : ""} ${subtitleAlignClass || layoutClass}`}
+                style={{ ...subtitleColorStyle, ...subtitleSizeStyle }}
+              >
+                {subtitleUseHtml ? (
+                  <span dangerouslySetInnerHTML={{ __html: subtitle }} />
+                ) : (
+                  subtitle
+                )}
+              </p>
+            )}
+            <TitleTag
+              className={`mb-4 ${titleSizeClass || "text-3xl"} ${titleWeightClass} ${titleFontClass} ${titleLineClass} ${titleLetterClass} ${titleTransformClass} ${titleAlignClass || layoutClass}`}
+              style={{ ...titleColorStyle, ...titleSizeStyle }}
+            >
+              {titleUseHtml ? (
+                <span dangerouslySetInnerHTML={{ __html: String(block.settings.title ?? "Section") }} />
               ) : (
-                <p className="whitespace-pre-wrap text-zinc-700">{body}</p>
+                String(block.settings.title ?? "Section")
               )}
-            </Card>
+            </TitleTag>
+            {dividerEl}
+            {subtitlePosition === "below" && subtitleVisible && subtitle && (
+              <p
+                className={`mb-4 ${subtitleSizeClass || "text-xl"} ${subtitleWeightClass} ${subtitleFontClass} ${subtitleLineClass} ${subtitleLetterClass} ${subtitleColor === "inherit" ? "text-zinc-600" : ""} ${subtitleAlignClass || layoutClass}`}
+                style={{ ...subtitleColorStyle, ...subtitleSizeStyle }}
+              >
+                {subtitleUseHtml ? (
+                  <span dangerouslySetInnerHTML={{ __html: subtitle }} />
+                ) : (
+                  subtitle
+                )}
+              </p>
+            )}
+            <div className={`mx-auto w-full ${maxWidthClass}`}>
+              <Card
+                variant={cardVariant as "outlined" | "elevated" | "filled" | "none"}
+                className={`${cardVariant !== "none" ? "border-zinc-200 bg-white/70" : ""} ${cardPaddingClass}`}
+              >
+                <div className={textLayoutColumns === "two" ? "columns-1 md:columns-2 gap-6" : ""}>
+                  {isHtml ? (
+                    <div
+                      className={`prose max-w-none text-zinc-700 ${proseSizeClass} ${bodyFontClass} ${bodySizeClass || "text-base"} ${bodyWeightClass} ${bodyLineClass} ${bodyLetterClass} ${textLayoutColumns === "two" ? "break-inside-avoid" : ""}`}
+                      style={{ ...bodyColorStyle, ...bodySizeStyle, ["--link-color" as string]: proseLinkColor } as CSSProperties}
+                      dangerouslySetInnerHTML={{ __html: body }}
+                    />
+                  ) : (
+                    <p
+                      className={`whitespace-pre-wrap ${bodyFontClass} ${bodySizeClass || "text-base"} ${bodyWeightClass} ${bodyLineClass} ${bodyLetterClass} ${bodyColor === "inherit" ? "text-zinc-700" : ""}`}
+                      style={{ ...bodyColorStyle, ...bodySizeStyle }}
+                    >
+                      {body}
+                    </p>
+                  )}
+                  {ctaText && (() => {
+                    const bgColor = ctaColor === "primary" ? theme.primary : ctaColor === "custom" && /^#[0-9A-Fa-f]{6}$/.test(ctaCustomColor) ? ctaCustomColor : theme.accent;
+                    const textCol = ctaTextColor === "custom" && /^#[0-9A-Fa-f]{6}$/.test(ctaTextCustomColor) ? ctaTextCustomColor : ctaTextColor === "white" ? "#ffffff" : ctaTextColor === "primary" ? theme.primary : "#ffffff";
+                    const borderW = ctaBorderWidth === "none" ? 0 : ctaBorderWidth === "thin" ? 1 : ctaBorderWidth === "thick" ? 4 : 2;
+                    const radius = ctaBorderRadius === "none" ? 0 : ctaBorderRadius === "sm" ? 4 : ctaBorderRadius === "lg" ? 8 : ctaBorderRadius === "full" ? 9999 : 6;
+                    const sizeClass = ctaSize === "compact" ? "px-4 py-2" : ctaSize === "large" ? "px-8 py-4" : "px-6 py-3";
+                    const fontSizeClass = ctaFontSize === "sm" ? "text-sm" : ctaFontSize === "lg" ? "text-lg" : "text-base";
+                    const style: CSSProperties = ctaStyle === "primary"
+                      ? { backgroundColor: bgColor, color: textCol, borderWidth: borderW, borderRadius: radius }
+                      : ctaStyle === "outline"
+                        ? { borderColor: bgColor, color: bgColor, borderWidth: borderW, borderRadius: radius }
+                        : { color: bgColor };
+                    return (
+                      <Link
+                        href={ctaHref || "#"}
+                        className={`mt-4 inline-flex ${sizeClass} ${fontSizeClass} font-medium transition hover:opacity-90 ${ctaStyle === "outline" ? "border" : ""}`}
+                        style={style}
+                      >
+                        {ctaText}
+                      </Link>
+                    );
+                  })()}
+                </div>
+              </Card>
+            </div>
           </div>
         </section>
       );
@@ -1161,8 +1552,9 @@ export default async function PortfolioPage() {
 
     if (block.type === "skills") {
       const subtitle = String(block.settings.subtitle ?? "");
+      const dataSource = String(block.settings.skillsDataSource ?? "auto");
       const blockSegments = Array.isArray(block.settings.segments)
-        ? (block.settings.segments as Array<{ name?: string; skills?: string[] }>).filter(
+        ? (block.settings.segments as Array<{ name?: string; skills?: string[]; skillUrls?: string[]; icon?: string }>).filter(
             (s) => (s.name ?? "").trim() || (s.skills ?? []).some((sk) => (sk ?? "").trim()),
           )
         : [];
@@ -1170,9 +1562,12 @@ export default async function PortfolioPage() {
         ? (block.settings.items as Array<{ name?: string; category?: string }>).filter((i) => (i.name ?? "").trim())
         : [];
       const apiItems = skills.slice(0, 50);
-      const hasBlockSegments = blockSegments.length > 0;
-      const hasLegacy = legacyItems.length > 0 && !hasBlockSegments;
-      const hasApi = apiItems.length > 0 && !hasBlockSegments && !hasLegacy;
+      const useBlock = dataSource === "block" || (dataSource === "auto" && blockSegments.length > 0);
+      const useLegacy = !useBlock && (dataSource === "auto" && legacyItems.length > 0);
+      const useApi = !useBlock && !useLegacy && (dataSource === "profile" || (dataSource === "auto" && apiItems.length > 0));
+      const hasBlockSegments = useBlock && blockSegments.length > 0;
+      const hasLegacy = useLegacy && legacyItems.length > 0;
+      const hasApi = useApi && apiItems.length > 0;
       const emptyMessage = String(
         block.settings.emptyMessage ?? "Add segments below or from your admin profile.",
       );
@@ -1185,6 +1580,7 @@ export default async function PortfolioPage() {
             skills: (s.skills ?? [])
               .filter((sk) => (sk ?? "").trim())
               .slice(0, maxPerSeg > 0 ? maxPerSeg : undefined),
+            skillUrls: s.skillUrls ?? [],
           }))
         : hasLegacy
           ? (() => {
@@ -1198,6 +1594,7 @@ export default async function PortfolioPage() {
                 name,
                 icon: undefined as string | undefined,
                 skills: maxPerSeg > 0 ? skills.slice(0, maxPerSeg) : skills,
+                skillUrls: [] as string[],
               }));
             })()
           : hasApi
@@ -1212,6 +1609,7 @@ export default async function PortfolioPage() {
                   name,
                   icon: undefined as string | undefined,
                   skills: maxPerSeg > 0 ? skills.slice(0, maxPerSeg) : skills,
+                  skillUrls: [] as string[],
                 }));
               })()
             : [];
@@ -1219,22 +1617,35 @@ export default async function PortfolioPage() {
       const align = String(block.settings.segmentAlign ?? "left");
       const alignClass =
         align === "center" ? "text-center items-center" : align === "right" ? "text-right items-end" : "text-left items-start";
+      const headerAlign = String(block.settings.skillsHeaderAlign ?? "left");
+      const headerAlignClass =
+        headerAlign === "center" ? "text-center" : headerAlign === "right" ? "text-right" : "text-left";
       const design = String(block.settings.segmentDesign ?? "badges");
       const layout = String(block.settings.segmentLayout ?? "vertical");
       const segmentCols = Math.min(6, Math.max(1, Number(block.settings.segmentGridColumns ?? 2)));
+      const segmentColsMobile = Math.min(6, Math.max(1, Number(block.settings.segmentGridColumnsMobile ?? 1)));
       const skillsCols = Math.min(6, Math.max(0, Number(block.settings.skillsGridColumns ?? 0)));
+      const skillsColsMobile = Math.min(6, Math.max(0, Number(block.settings.skillsGridColumnsMobile ?? 0)));
       const skillColor = String(block.settings.skillColor ?? "accent");
       const skillSize = String(block.settings.skillSize ?? "md");
+      const skillUniformWidth = Boolean(block.settings.skillUniformWidth ?? false);
 
+      const segmentGap = String(block.settings.segmentGap ?? "md");
+      const segmentGapClass = segmentGap === "none" ? "gap-0" : segmentGap === "sm" ? "gap-4" : segmentGap === "lg" ? "gap-8" : "gap-6";
+      const headerGap = String(block.settings.headerGap ?? "md");
+      const headerGapClass = headerGap === "none" ? "" : headerGap === "sm" ? "mt-1" : headerGap === "lg" ? "mt-3" : "mt-2";
       const SEGMENT_GRID_CLASS: Record<number, string> = {
-        1: "grid gap-6 grid-cols-1",
-        2: "grid gap-6 md:grid-cols-2",
-        3: "grid gap-6 md:grid-cols-2 lg:grid-cols-3",
-        4: "grid gap-6 md:grid-cols-2 lg:grid-cols-4",
-        5: "grid gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5",
-        6: "grid gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6",
+        1: "grid grid-cols-1",
+        2: "grid md:grid-cols-2",
+        3: "grid md:grid-cols-2 lg:grid-cols-3",
+        4: "grid md:grid-cols-2 lg:grid-cols-4",
+        5: "grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5",
+        6: "grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6",
       };
-      const segmentGridClass = layout === "horizontal" ? SEGMENT_GRID_CLASS[segmentCols] ?? SEGMENT_GRID_CLASS[2] : "";
+      const segmentGridClass =
+        layout === "horizontal"
+          ? `${SEGMENT_GRID_CLASS[segmentCols] ?? SEGMENT_GRID_CLASS[2]} ${segmentGapClass}`
+          : "";
 
       const SKILLS_GRID_CLASS: Record<number, string> = {
         1: "grid grid-cols-1 gap-2",
@@ -1246,46 +1657,217 @@ export default async function PortfolioPage() {
       };
       const skillsGridClass = skillsCols > 0 ? SKILLS_GRID_CLASS[skillsCols] ?? "" : "";
 
-      const getSkillColorStyle = () => {
-        if (skillColor === "primary") return { backgroundColor: "var(--portfolio-primary)", color: "white" };
-        if (skillColor === "neutral") return { backgroundColor: "#e4e4e7", color: "#18181b" };
-        return { backgroundColor: "var(--portfolio-accent)", color: "white" };
+      const getSkillColorStyle = (): CSSProperties => {
+        const bg = skillCustomColor
+          ? skillCustomColor
+          : skillColor === "primary"
+            ? "var(--portfolio-primary)"
+            : skillColor === "neutral"
+              ? "#e4e4e7"
+              : "var(--portfolio-accent)";
+        let textColor: string;
+        if (skillTextColor === "white") textColor = "white";
+        else if (skillTextColor === "black") textColor = "#18181b";
+        else if (skillTextColor === "custom") textColor = skillTextCustomColor;
+        else if (skillColor === "neutral") textColor = "#18181b";
+        else textColor = "white";
+        return { backgroundColor: bg, color: textColor };
       };
       const sizeClass = skillSize === "sm" ? "text-xs px-2 py-0.5" : skillSize === "lg" ? "text-base px-5 py-2" : "text-sm px-3 py-1";
 
-      const SEGMENT_ICONS: Record<string, string> = {
-        code: "⌨",
-        server: "🖥",
-        database: "🗄",
-        palette: "🎨",
-        wrench: "🔧",
-        layout: "▦",
+      const siteFont = String(siteConfig.fontFamily ?? "inherit");
+      const skillsTitleFontFamily = String(block.settings.skillsTitleFontFamily ?? "inherit");
+      const skillsTitleFontSize = String(block.settings.skillsTitleFontSize ?? "inherit");
+      const skillsTitleFontWeight = String(block.settings.skillsTitleFontWeight ?? "bold");
+      const skillsTitleColor = String(block.settings.skillsTitleColor ?? "inherit");
+      const skillsTitleCustomColor = String(block.settings.skillsTitleCustomColor ?? "").trim() || theme.primary;
+      const skillsSubtitleFontFamily = String(block.settings.skillsSubtitleFontFamily ?? "inherit");
+      const skillsSubtitleFontSize = String(block.settings.skillsSubtitleFontSize ?? "inherit");
+      const skillsSubtitleColor = String(block.settings.skillsSubtitleColor ?? "inherit");
+      const skillsSubtitleCustomColor = String(block.settings.skillsSubtitleCustomColor ?? "").trim() || "#52525b";
+
+      const skillsTitleFontClass =
+        (skillsTitleFontFamily === "inherit" ? siteFont : skillsTitleFontFamily) !== "inherit"
+          ? `font-hero-${skillsTitleFontFamily === "inherit" ? siteFont : skillsTitleFontFamily}`
+          : "";
+      const skillsTitleSizeMap: Record<string, string> = { "2xl": "text-2xl", "3xl": "text-3xl", "4xl": "text-4xl" };
+      const skillsTitleSizeClass =
+        skillsTitleFontSize === "inherit" ? "text-3xl" : skillsTitleSizeMap[skillsTitleFontSize] ?? "text-3xl";
+      const skillsTitleWeightClass =
+        skillsTitleFontWeight === "inherit"
+          ? "font-bold"
+          : skillsTitleFontWeight === "medium"
+            ? "font-medium"
+            : skillsTitleFontWeight === "semibold"
+              ? "font-semibold"
+              : skillsTitleFontWeight === "normal"
+                ? "font-normal"
+                : "font-bold";
+      const skillsTitleColorStyle = (): CSSProperties | undefined => {
+        if (skillsTitleColor === "inherit") return undefined;
+        if (skillsTitleColor === "primary") return { color: "var(--portfolio-primary)" };
+        if (skillsTitleColor === "accent") return { color: "var(--portfolio-accent)" };
+        if (skillsTitleColor === "custom") return { color: skillsTitleCustomColor };
+        return undefined;
       };
 
-      const renderSkills = (segSkills: string[]) => {
+      const skillsSubtitleFontWeight = String(block.settings.skillsSubtitleFontWeight ?? "inherit");
+      const skillsSubtitleWeightClass =
+        skillsSubtitleFontWeight === "inherit"
+          ? ""
+          : skillsSubtitleFontWeight === "medium"
+            ? "font-medium"
+            : skillsSubtitleFontWeight === "semibold"
+              ? "font-semibold"
+              : skillsSubtitleFontWeight === "bold"
+                ? "font-bold"
+                : skillsSubtitleFontWeight === "normal"
+                  ? "font-normal"
+                  : "";
+      const skillsSubtitleFontClass =
+        (skillsSubtitleFontFamily === "inherit" ? siteFont : skillsSubtitleFontFamily) !== "inherit"
+          ? `font-hero-${skillsSubtitleFontFamily === "inherit" ? siteFont : skillsSubtitleFontFamily}`
+          : "";
+      const skillsSubtitleSizeMap: Record<string, string> = { sm: "text-sm", base: "text-base", lg: "text-lg" };
+      const skillsSubtitleSizeClass =
+        skillsSubtitleFontSize === "inherit" ? "text-base" : skillsSubtitleSizeMap[skillsSubtitleFontSize] ?? "text-base";
+      const skillsSubtitleColorStyle = (): CSSProperties | undefined => {
+        if (skillsSubtitleColor === "inherit") return undefined;
+        if (skillsSubtitleColor === "primary") return { color: "var(--portfolio-primary)" };
+        if (skillsSubtitleColor === "accent") return { color: "var(--portfolio-accent)" };
+        if (skillsSubtitleColor === "custom") return { color: skillsSubtitleCustomColor };
+        return undefined;
+      };
+
+      const segmentTitleFontFamily = String(block.settings.segmentTitleFontFamily ?? "inherit");
+      const segmentTitleFontSize = String(block.settings.segmentTitleFontSize ?? "inherit");
+      const segmentTitleFontWeight = String(block.settings.segmentTitleFontWeight ?? "semibold");
+      const segmentTitleColor = String(block.settings.segmentTitleColor ?? "accent");
+      const segmentTitleCustomColor = String(block.settings.segmentTitleCustomColor ?? "").trim() || theme.accent;
+      const segmentTitleBgColor = String(block.settings.segmentTitleBgColor ?? "none");
+      const segmentTitleBgCustomColor = String(block.settings.segmentTitleBgCustomColor ?? "").trim() || "#f4f4f5";
+      const segmentTitlePadding = String(block.settings.segmentTitlePadding ?? "none");
+      const segmentTitleBorderRadius = String(block.settings.segmentTitleBorderRadius ?? "none");
+      const segmentTitleBorder = String(block.settings.segmentTitleBorder ?? "none");
+      const segmentTitleBorderColor = String(block.settings.segmentTitleBorderColor ?? "accent");
+      const segmentTitleBorderCustomColor = String(block.settings.segmentTitleBorderCustomColor ?? "").trim() || theme.accent;
+      const segmentTitleShadow = String(block.settings.segmentTitleShadow ?? "none");
+      const segmentTitleFontClass =
+        (segmentTitleFontFamily === "inherit" ? siteFont : segmentTitleFontFamily) !== "inherit"
+          ? `font-hero-${segmentTitleFontFamily === "inherit" ? siteFont : segmentTitleFontFamily}`
+          : "";
+      const segmentTitleSizeMap: Record<string, string> = { sm: "text-sm", base: "text-base", lg: "text-lg", xl: "text-xl" };
+      const segmentTitleSizeClass =
+        segmentTitleFontSize === "inherit" ? "text-lg" : segmentTitleSizeMap[segmentTitleFontSize] ?? "text-lg";
+      const segmentTitleWeightClass =
+        segmentTitleFontWeight === "inherit"
+          ? "font-semibold"
+          : segmentTitleFontWeight === "medium"
+            ? "font-medium"
+            : segmentTitleFontWeight === "bold"
+              ? "font-bold"
+              : segmentTitleFontWeight === "normal"
+                ? "font-normal"
+                : "font-semibold";
+      const segmentTitleColorStyle = (): CSSProperties | undefined => {
+        if (segmentTitleColor === "inherit") return undefined;
+        if (segmentTitleColor === "primary") return { color: "var(--portfolio-primary)" };
+        if (segmentTitleColor === "accent") return { color: "var(--portfolio-accent)" };
+        if (segmentTitleColor === "custom") return { color: segmentTitleCustomColor };
+        return { color: "var(--portfolio-accent)" };
+      };
+      const segmentTitleBgStyle = (): CSSProperties | undefined => {
+        if (segmentTitleBgColor === "none") return undefined;
+        if (segmentTitleBgColor === "custom") return { backgroundColor: segmentTitleBgCustomColor };
+        if (segmentTitleBgColor === "accent") return { backgroundColor: "var(--portfolio-accent)", color: "white" };
+        if (segmentTitleBgColor === "primary") return { backgroundColor: "var(--portfolio-primary)", color: "white" };
+        return undefined;
+      };
+      const segmentTitlePaddingClass =
+        segmentTitlePadding === "sm" ? "px-2 py-0.5" : segmentTitlePadding === "md" ? "px-3 py-1" : segmentTitlePadding === "lg" ? "px-4 py-2" : "";
+      const segmentTitleRadiusClass =
+        segmentTitleBorderRadius === "sm" ? "rounded" : segmentTitleBorderRadius === "md" ? "rounded-md" : segmentTitleBorderRadius === "lg" ? "rounded-lg" : segmentTitleBorderRadius === "full" ? "rounded-full" : "";
+      const segmentTitleBorderClass =
+        segmentTitleBorder === "none" ? "border-0" : segmentTitleBorder === "sm" ? "border" : segmentTitleBorder === "md" ? "border-2" : segmentTitleBorder === "lg" ? "border-[3px]" : "border-0";
+      const segmentTitleBorderColorStyle = (): CSSProperties | undefined => {
+        if (segmentTitleBorder === "none") return undefined;
+        if (segmentTitleBorderColor === "accent") return { borderColor: "var(--portfolio-accent)" };
+        if (segmentTitleBorderColor === "primary") return { borderColor: "var(--portfolio-primary)" };
+        if (segmentTitleBorderColor === "custom") return { borderColor: segmentTitleBorderCustomColor };
+        return { borderColor: "#d4d4d8" };
+      };
+      const segmentTitleShadowClass =
+        segmentTitleShadow === "sm" ? "shadow-sm" : segmentTitleShadow === "md" ? "shadow-md" : segmentTitleShadow === "lg" ? "shadow-lg" : "";
+
+      const skillFontWeight = String(block.settings.skillFontWeight ?? "medium");
+      const skillTextColor = String(block.settings.skillTextColor ?? "auto");
+      const skillTextCustomColor = String(block.settings.skillTextCustomColor ?? "").trim() || "#ffffff";
+      const skillCustomColor = String(block.settings.skillCustomColor ?? "").trim();
+      const skillBorderRadius = String(block.settings.skillBorderRadius ?? "md");
+      const skillHoverEffect = String(block.settings.skillHoverEffect ?? "subtle");
+      const skillHoverClass =
+        skillHoverEffect === "none"
+          ? ""
+          : skillHoverEffect === "subtle"
+            ? "transition-opacity hover:opacity-90"
+            : skillHoverEffect === "lift"
+              ? "transition-transform hover:scale-105"
+              : skillHoverEffect === "glow"
+                ? "transition-shadow hover:shadow-md"
+                : "";
+      const skillWeightClass =
+        skillFontWeight === "normal" ? "font-normal" : skillFontWeight === "semibold" ? "font-semibold" : skillFontWeight === "bold" ? "font-bold" : "font-medium";
+      const skillRadiusClass =
+        skillBorderRadius === "none" ? "" : skillBorderRadius === "sm" ? "rounded" : skillBorderRadius === "lg" ? "rounded-lg" : skillBorderRadius === "full" ? "rounded-full" : "rounded-md";
+
+      const uniformGridBase =
+        skillUniformWidth
+          ? skillsCols > 0
+            ? (SKILLS_GRID_CLASS[skillsCols] ?? "grid grid-cols-2 gap-2")
+            : "grid grid-cols-[repeat(auto-fill,minmax(6rem,1fr))] gap-2"
+          : "";
+      const uniformItemClass = skillUniformWidth ? "flex justify-center items-center w-full min-w-0" : "";
+
+      const renderSkillContent = (skill: string, url?: string) => {
+        const content = <>{skill}</>;
+        if (url && url.trim().startsWith("http")) {
+          return (
+            <a href={url.trim()} target="_blank" rel="noopener noreferrer" className="text-inherit no-underline hover:underline">
+              {content}
+            </a>
+          );
+        }
+        return content;
+      };
+
+      const renderSkills = (segSkills: string[], segSkillUrls?: string[]) => {
+        const urls = segSkillUrls ?? [];
         const colorStyle = getSkillColorStyle();
         const justifyClass = align === "center" ? "justify-center" : align === "right" ? "justify-end" : "";
         const gridAlignClass =
-          skillsGridClass && align === "center"
+          (skillsGridClass || uniformGridBase) && align === "center"
             ? " justify-items-center"
-            : skillsGridClass && align === "right"
+            : (skillsGridClass || uniformGridBase) && align === "right"
               ? " justify-items-end"
               : "";
-        const layoutClass = skillsGridClass
+        const baseLayoutClass = skillsGridClass
           ? `${skillsGridClass}${gridAlignClass}`
           : `flex flex-wrap gap-2 ${justifyClass}`;
+        const layoutClass = skillUniformWidth
+          ? `${uniformGridBase}${gridAlignClass}`
+          : baseLayoutClass;
         if (design === "badges") {
           return (
             <div className={layoutClass}>
               {segSkills.map((skill, i) => (
                 <span
                   key={i}
-                  className={`rounded-md font-medium ${sizeClass} ${
-                    skillColor === "neutral" ? "border border-zinc-300 bg-zinc-100 text-zinc-700" : ""
+                  className={`${skillWeightClass} ${skillRadiusClass || "rounded-md"} ${sizeClass} ${uniformItemClass} ${skillHoverClass} ${
+                    skillColor === "neutral" && !skillCustomColor ? "border border-zinc-300 bg-zinc-100 text-zinc-700" : ""
                   }`}
-                  style={skillColor === "neutral" ? undefined : colorStyle}
+                  style={skillColor === "neutral" && !skillCustomColor ? undefined : colorStyle}
                 >
-                  {skill}
+                  {renderSkillContent(skill, urls[i])}
                 </span>
               ))}
             </div>
@@ -1297,10 +1879,10 @@ export default async function PortfolioPage() {
               {segSkills.map((skill, i) => (
                 <span
                   key={i}
-                  className={`rounded-full font-medium ${sizeClass}`}
+                  className={`${skillWeightClass} ${skillRadiusClass || "rounded-full"} ${sizeClass} ${uniformItemClass} ${skillHoverClass}`}
                   style={colorStyle}
                 >
-                  {skill}
+                  {renderSkillContent(skill, urls[i])}
                 </span>
               ))}
             </div>
@@ -1313,10 +1895,14 @@ export default async function PortfolioPage() {
                 <Card
                   key={i}
                   variant="outlined"
-                  className={`px-4 py-2 ${skillSize === "sm" ? "text-xs" : skillSize === "lg" ? "text-base" : "text-sm"}`}
-                  style={skillColor !== "neutral" ? { borderColor: colorStyle.backgroundColor } : undefined}
+                  className={`px-4 py-2 ${skillWeightClass} ${skillHoverClass} ${skillSize === "sm" ? "text-xs" : skillSize === "lg" ? "text-base" : "text-sm"} ${uniformItemClass} text-center`}
+                  style={
+                    skillColor !== "neutral" || skillCustomColor
+                      ? { backgroundColor: colorStyle.backgroundColor, color: colorStyle.color, borderColor: colorStyle.backgroundColor }
+                      : undefined
+                  }
                 >
-                  {skill}
+                  {renderSkillContent(skill, urls[i])}
                 </Card>
               ))}
             </div>
@@ -1326,8 +1912,8 @@ export default async function PortfolioPage() {
           return (
             <ul className={`list-inside list-disc space-y-1 ${alignClass}`}>
               {segSkills.map((skill, i) => (
-                <li key={i} className="text-zinc-700">
-                  {skill}
+                <li key={i} className={`text-zinc-700 ${skillWeightClass}`}>
+                  {renderSkillContent(skill, urls[i])}
                 </li>
               ))}
             </ul>
@@ -1339,9 +1925,14 @@ export default async function PortfolioPage() {
               {segSkills.map((skill, i) => (
                 <span
                   key={i}
-                  className={`rounded border border-zinc-300 bg-zinc-50 font-medium text-zinc-700 ${sizeClass}`}
+                  className={`border border-zinc-300 bg-zinc-50 text-zinc-700 ${skillWeightClass} ${skillRadiusClass || "rounded"} ${sizeClass} ${uniformItemClass} ${skillHoverClass}`}
+                  style={
+                    skillCustomColor
+                      ? { backgroundColor: skillCustomColor, color: skillTextColor === "custom" ? skillTextCustomColor : "white", borderColor: "transparent" }
+                      : undefined
+                  }
                 >
-                  {skill}
+                  {renderSkillContent(skill, urls[i])}
                 </span>
               ))}
             </div>
@@ -1350,30 +1941,71 @@ export default async function PortfolioPage() {
         return null;
       };
 
+      const sectionBgColor = String(block.settings.sectionBgColor ?? "none");
+      const sectionBgStyle =
+        sectionBgColor === "custom"
+          ? { backgroundColor: String(block.settings.sectionBgCustomColor ?? "#fafafa") }
+          : sectionBgColor === "light"
+            ? { backgroundColor: "#f4f4f5" }
+            : undefined;
+      const sectionPadding = String(block.settings.sectionPadding ?? "md");
+      const sectionPaddingClass =
+        sectionPadding === "none" ? "" : sectionPadding === "sm" ? "py-4" : sectionPadding === "lg" ? "py-12" : "py-8";
+      const sectionBorder = String(block.settings.sectionBorder ?? "none");
+      const sectionBorderClass =
+        sectionBorder === "top" ? "border-t border-zinc-200" : sectionBorder === "full" ? "border border-zinc-200" : "";
+
       return (
-        <section id={sectionId(block)} className={sectionClass} style={getBlockSectionStyle(block.style)}>
+        <section
+          id={sectionId(block)}
+          className={`${sectionClass} ${sectionPaddingClass} ${sectionBorderClass}`}
+          style={{ ...getBlockSectionStyle(block.style), ...sectionBgStyle }}
+        >
           <div className={containerClass} style={style}>
-            <h2 className="mb-6 text-3xl font-bold">{String(block.settings.title ?? "Skills")}</h2>
-            {subtitle && <p className="mb-6 text-zinc-600">{subtitle}</p>}
+            <div className={`mb-6 ${headerAlignClass}`}>
+              <h2
+                className={`${skillsTitleFontClass} ${skillsTitleSizeClass} ${skillsTitleWeightClass}`}
+                style={skillsTitleColorStyle()}
+              >
+                {String(block.settings.title ?? "Skills")}
+              </h2>
+              {subtitle && (
+                <p
+                  className={`text-zinc-600 ${skillsSubtitleFontClass} ${skillsSubtitleSizeClass} ${skillsSubtitleWeightClass} ${headerGapClass}`}
+                  style={skillsSubtitleColorStyle()}
+                >
+                  {subtitle}
+                </p>
+              )}
+            </div>
             {segmentsToRender.length > 0 ? (
               <div
                 className={
                   layout === "horizontal"
                     ? `${segmentGridClass} ${alignClass}`
-                    : `flex flex-col gap-6 ${alignClass}`
+                    : `flex flex-col ${segmentGapClass} ${alignClass}`
                 }
               >
                 {segmentsToRender.map((seg, idx) => (
                   <div key={idx} className={layout === "horizontal" ? "" : "w-full"}>
-                    <h3 className="mb-3 text-lg font-semibold" style={{ color: "var(--portfolio-accent)" }}>
-                      {seg.icon && SEGMENT_ICONS[seg.icon] && (
+                    <h3
+                      className={`mb-3 border-solid ${segmentTitleFontClass} ${segmentTitleSizeClass} ${segmentTitleWeightClass} ${segmentTitlePaddingClass} ${segmentTitleRadiusClass} ${segmentTitleBorderClass} ${segmentTitleShadowClass}`}
+                      style={{
+                        ...(segmentTitleBgColor === "custom" || !segmentTitleBgColor || segmentTitleBgColor === "none"
+                          ? segmentTitleColorStyle()
+                          : {}),
+                        ...(segmentTitleBgStyle() ?? {}),
+                        ...(segmentTitleBorderColorStyle() ?? {}),
+                      }}
+                    >
+                      {seg.icon && SEGMENT_ICON_MAP[seg.icon] && (
                         <span className="mr-2" aria-hidden>
-                          {SEGMENT_ICONS[seg.icon]}
+                          {SEGMENT_ICON_MAP[seg.icon]}
                         </span>
                       )}
                       {seg.name}
                     </h3>
-                    {renderSkills(seg.skills)}
+                    {renderSkills(seg.skills ?? [], seg.skillUrls)}
                   </div>
                 ))}
               </div>
@@ -2071,9 +2703,13 @@ export default async function PortfolioPage() {
       ) : (
         <section className="px-6 py-24">
           <div className="mx-auto max-w-3xl text-center">
-            <h1 className="text-4xl font-bold text-zinc-900">Blank portfolio page</h1>
+            <h1 className="text-4xl font-bold text-zinc-900">
+              {resolveStatus === "404" || !tenantId ? "Subdomain not found" : "Blank portfolio page"}
+            </h1>
             <p className="mt-4 text-zinc-600">
-              This site is currently empty. Add blocks from your admin portfolio builder.
+              {resolveStatus === "404" || !tenantId
+                ? "This subdomain is not registered. Check your URL or contact support."
+                : "Add blocks in the admin design page and click Save to publish your portfolio."}
             </p>
           </div>
         </section>

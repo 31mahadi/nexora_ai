@@ -3,7 +3,15 @@
   "workspaces": {
     "": {
       "dependencies": {
+        "@dnd-kit/core": "^6.3.1",
+        "@dnd-kit/modifiers": "^9.0.0",
+        "@dnd-kit/sortable": "^10.0.0",
+        "@dnd-kit/utilities": "^3.2.2",
+        "@tiptap/extension-image": "^3.20.0",
         "@tiptap/extension-link": "^3.20.0",
+        "@tiptap/extension-placeholder": "^3.20.0",
+        "@tiptap/extension-text-align": "^3.20.0",
+        "@tiptap/extension-underline": "^3.20.0",
         "@tiptap/react": "^3.20.0",
         "@tiptap/starter-kit": "^3.20.0",
       },
@@ -16,6 +24,7 @@
       "name": "admin",
       "version": "0.0.0",
       "dependencies": {
+        "@nexora/portfolio-builder": "packages/portfolio-builder",
         "@nexora/types": "packages/types",
         "@nexora/ui": "packages/ui",
         "@nexora/utils": "packages/utils",
@@ -41,6 +50,7 @@
       "name": "portfolio",
       "version": "0.0.0",
       "dependencies": {
+        "@nexora/portfolio-builder": "packages/portfolio-builder",
         "@nexora/types": "packages/types",
         "@nexora/ui": "packages/ui",
         "@nexora/utils": "packages/utils",
@@ -428,6 +438,16 @@
 
     "@colors/colors": ["@colors/colors@1.5.0", "", {}, "sha512-ooWCrlZP11i8GImSjTHYHLkvFDP48nS4+204nGb1RiX/WXYHmJA2III9/e2DWVabCESdW7hBAEzHRqUn9OUVvQ=="],
 
+    "@dnd-kit/accessibility": ["@dnd-kit/accessibility@3.1.1", "", { "dependencies": { "tslib": "^2.0.0" }, "peerDependencies": { "react": ">=16.8.0" } }, "sha512-2P+YgaXF+gRsIihwwY1gCsQSYnu9Zyj2py8kY5fFvUM1qm2WA2u639R6YNVfU4GWr+ZM5mqEsfHZZLoRONbemw=="],
+
+    "@dnd-kit/core": ["@dnd-kit/core@6.3.1", "", { "dependencies": { "@dnd-kit/accessibility": "^3.1.1", "@dnd-kit/utilities": "^3.2.2", "tslib": "^2.0.0" }, "peerDependencies": { "react": ">=16.8.0", "react-dom": ">=16.8.0" } }, "sha512-xkGBRQQab4RLwgXxoqETICr6S5JlogafbhNsidmrkVv2YRs5MLwpjoF2qpiGjQt8S9AoxtIV603s0GIUpY5eYQ=="],
+
+    "@dnd-kit/modifiers": ["@dnd-kit/modifiers@9.0.0", "", { "dependencies": { "@dnd-kit/utilities": "^3.2.2", "tslib": "^2.0.0" }, "peerDependencies": { "@dnd-kit/core": "^6.3.0", "react": ">=16.8.0" } }, "sha512-ybiLc66qRGuZoC20wdSSG6pDXFikui/dCNGthxv4Ndy8ylErY0N3KVxY2bgo7AWwIbxDmXDg3ylAFmnrjcbVvw=="],
+
+    "@dnd-kit/sortable": ["@dnd-kit/sortable@10.0.0", "", { "dependencies": { "@dnd-kit/utilities": "^3.2.2", "tslib": "^2.0.0" }, "peerDependencies": { "@dnd-kit/core": "^6.3.0", "react": ">=16.8.0" } }, "sha512-+xqhmIIzvAYMGfBYYnbKuNicfSsk4RksY2XdmJhT+HAC01nix6fHCztU68jooFiMUB01Ky3F0FyOvhG/BZrWkg=="],
+
+    "@dnd-kit/utilities": ["@dnd-kit/utilities@3.2.2", "", { "dependencies": { "tslib": "^2.0.0" }, "peerDependencies": { "react": ">=16.8.0" } }, "sha512-+MKAJEOfaBe5SmV6t34p80MMKhjvUz0vRrvVJbPT0WElzaOJ/1xs+D+KDv+tD/NE5ujfrChEcshd4fLn0wpiqg=="],
+
     "@emnapi/runtime": ["@emnapi/runtime@1.8.1", "", { "dependencies": { "tslib": "^2.4.0" } }, "sha512-mehfKSMWjjNol8659Z8KxEMrdSJDDot5SXMq00dM8BN4o+CLNXQ0xH2V7EchNHV4RmbZLmmPdEaXZc5H2FXmDg=="],
 
     "@floating-ui/core": ["@floating-ui/core@1.7.4", "", { "dependencies": { "@floating-ui/utils": "^0.2.10" } }, "sha512-C3HlIdsBxszvm5McXlB8PeOEWfBhcGBTZGkGlWc2U0KFY5IwG5OQEuQ8rq52DZmcHDlPLd+YFBK+cZcytwIFWg=="],
@@ -642,6 +662,8 @@
 
     "@tiptap/extension-horizontal-rule": ["@tiptap/extension-horizontal-rule@3.20.0", "", { "peerDependencies": { "@tiptap/core": "^3.20.0", "@tiptap/pm": "^3.20.0" } }, "sha512-6uvcutFMv+9wPZgptDkbRDjAm3YVxlibmkhWD5GuaWwS9L/yUtobpI3GycujRSUZ8D3q6Q9J7LqpmQtQRTalWA=="],
 
+    "@tiptap/extension-image": ["@tiptap/extension-image@3.20.0", "", { "peerDependencies": { "@tiptap/core": "^3.20.0" } }, "sha512-0t7HYncV0kYEQS79NFczxdlZoZ8zu8X4VavDqt+mbSAUKRq3gCvgtZ5Zyd778sNmtmbz3arxkEYMIVou2swD0g=="],
+
     "@tiptap/extension-italic": ["@tiptap/extension-italic@3.20.0", "", { "peerDependencies": { "@tiptap/core": "^3.20.0" } }, "sha512-/DhnKQF8yN8RxtuL8abZ28wd5281EaGoE2Oha35zXSOF1vNYnbyt8Ymkv/7u1BcWEWTvRPgaju0YCGXisPRLYw=="],
 
     "@tiptap/extension-link": ["@tiptap/extension-link@3.20.0", "", { "dependencies": { "linkifyjs": "^4.3.2" }, "peerDependencies": { "@tiptap/core": "^3.20.0", "@tiptap/pm": "^3.20.0" } }, "sha512-qI/5A+R0ZWBxo/8HxSn1uOyr7odr3xHBZ/gzOR1GUJaZqjlJxkWFX0RtXMbLKEGEvT25o345cF7b0wFznEh8qA=="],
@@ -656,9 +678,13 @@
 
     "@tiptap/extension-paragraph": ["@tiptap/extension-paragraph@3.20.0", "", { "peerDependencies": { "@tiptap/core": "^3.20.0" } }, "sha512-mM99zK4+RnEXIMCv6akfNATAs0Iija6FgyFA9J9NZ6N4o8y9QiNLLa6HjLpAC+W+VoCgQIekyoF/Q9ftxmAYDQ=="],
 
+    "@tiptap/extension-placeholder": ["@tiptap/extension-placeholder@3.20.0", "", { "peerDependencies": { "@tiptap/extensions": "^3.20.0" } }, "sha512-ZhYD3L5m16ydSe2z8vqz+RdtAG/iOQaFHHedFct70tKRoLqi2ajF5kgpemu8DwpaRTcyiCN4G99J/+MqehKNjQ=="],
+
     "@tiptap/extension-strike": ["@tiptap/extension-strike@3.20.0", "", { "peerDependencies": { "@tiptap/core": "^3.20.0" } }, "sha512-0vcTZRRAiDfon3VM1mHBr9EFmTkkUXMhm0Xtdtn0bGe+sIqufyi+hUYTEw93EQOD9XNsPkrud6jzQNYpX2H3AQ=="],
 
     "@tiptap/extension-text": ["@tiptap/extension-text@3.20.0", "", { "peerDependencies": { "@tiptap/core": "^3.20.0" } }, "sha512-tf8bE8tSaOEWabCzPm71xwiUhyMFKqY9jkP5af3Kr1/F45jzZFIQAYZooHI/+zCHRrgJ99MQHKHe1ZNvODrKHQ=="],
+
+    "@tiptap/extension-text-align": ["@tiptap/extension-text-align@3.20.0", "", { "peerDependencies": { "@tiptap/core": "^3.20.0" } }, "sha512-4s0r+bovtH6yeGDUD+Ui8j5WOV5koB5P6AuzOMqoLwaFGRSkKf64ly6DXjjmjIgnYCLZN/XO6llaQKVVdvad2g=="],
 
     "@tiptap/extension-underline": ["@tiptap/extension-underline@3.20.0", "", { "peerDependencies": { "@tiptap/core": "^3.20.0" } }, "sha512-LzNXuy2jwR/y+ymoUqC72TiGzbOCjioIjsDu0MNYpHuHqTWPK5aV9Mh0nbZcYFy/7fPlV1q0W139EbJeYBZEAQ=="],
 
@@ -764,7 +790,7 @@
 
     "acorn-import-phases": ["acorn-import-phases@1.0.4", "", { "peerDependencies": { "acorn": "^8.14.0" } }, "sha512-wKmbr/DDiIXzEOiWrTTUcDm24kQ2vGfZQvM2fwg2vXqR5uW6aapr7ObPtj1th32b9u90/Pf4AItvdTh42fBmVQ=="],
 
-    "admin": ["admin@workspace:apps/admin", { "dependencies": { "@nexora/types": "packages/types", "@nexora/ui": "packages/ui", "@nexora/utils": "packages/utils", "@supabase/ssr": "^0.5.0", "@supabase/supabase-js": "^2.47.0", "lucide-react": "^0.575.0", "next": "^15.1.0", "react": "^19.0.0", "react-dom": "^19.0.0", "sonner": "^2.0.7" }, "devDependencies": { "@nexora/config": "packages/config", "@types/node": "^22.0.0", "@types/react": "^19.0.0", "@types/react-dom": "^19.0.0", "postcss": "^8.4.0", "tailwindcss": "^3.4.0", "typescript": "^5.7.0" } }],
+    "admin": ["admin@workspace:apps/admin", { "dependencies": { "@nexora/portfolio-builder": "packages/portfolio-builder", "@nexora/types": "packages/types", "@nexora/ui": "packages/ui", "@nexora/utils": "packages/utils", "@supabase/ssr": "^0.5.0", "@supabase/supabase-js": "^2.47.0", "lucide-react": "^0.575.0", "next": "^15.1.0", "react": "^19.0.0", "react-dom": "^19.0.0", "sonner": "^2.0.7" }, "devDependencies": { "@nexora/config": "packages/config", "@types/node": "^22.0.0", "@types/react": "^19.0.0", "@types/react-dom": "^19.0.0", "postcss": "^8.4.0", "tailwindcss": "^3.4.0", "typescript": "^5.7.0" } }],
 
     "ai-ms": ["ai-ms@workspace:server/ai-ms", { "dependencies": { "@nestjs/common": "^11.0.0", "@nestjs/config": "^3.3.0", "@nestjs/core": "^11.0.0", "@nestjs/platform-express": "^11.0.0", "@nexora/types": "packages/types", "reflect-metadata": "^0.2.0", "rxjs": "^7.8.0" }, "devDependencies": { "@nestjs/cli": "^11.0.0", "@nexora/config": "packages/config", "@types/express": "^5.0.0", "@types/node": "^22.0.0", "typescript": "^5.7.0" } }],
 
@@ -1270,7 +1296,7 @@
 
     "pluralize": ["pluralize@8.0.0", "", {}, "sha512-Nc3IT5yHzflTfbjgqWcCPpo7DaKy4FnpB0l/zCAW0Tc7jxAiuqSxHasntB3D7887LSrA93kDJ9IXovxJYxyLCA=="],
 
-    "portfolio": ["portfolio@workspace:apps/portfolio", { "dependencies": { "@nexora/types": "packages/types", "@nexora/ui": "packages/ui", "@nexora/utils": "packages/utils", "next": "^15.1.0", "react": "^19.0.0", "react-dom": "^19.0.0" }, "devDependencies": { "@nexora/config": "packages/config", "@types/node": "^22.0.0", "@types/react": "^19.0.0", "@types/react-dom": "^19.0.0", "postcss": "^8.4.0", "tailwindcss": "^3.4.0", "typescript": "^5.7.0" } }],
+    "portfolio": ["portfolio@workspace:apps/portfolio", { "dependencies": { "@nexora/portfolio-builder": "packages/portfolio-builder", "@nexora/types": "packages/types", "@nexora/ui": "packages/ui", "@nexora/utils": "packages/utils", "next": "^15.1.0", "react": "^19.0.0", "react-dom": "^19.0.0" }, "devDependencies": { "@nexora/config": "packages/config", "@types/node": "^22.0.0", "@types/react": "^19.0.0", "@types/react-dom": "^19.0.0", "postcss": "^8.4.0", "tailwindcss": "^3.4.0", "typescript": "^5.7.0" } }],
 
     "portfolio-ms": ["portfolio-ms@workspace:server/portfolio-ms", { "dependencies": { "@nestjs/common": "^11.0.0", "@nestjs/config": "^3.3.0", "@nestjs/core": "^11.0.0", "@nestjs/platform-express": "^11.0.0", "@nestjs/typeorm": "^11.0.0", "@nexora/types": "packages/types", "pg": "^8.13.0", "reflect-metadata": "^0.2.0", "rxjs": "^7.8.0", "typeorm": "^0.3.28" }, "devDependencies": { "@nestjs/cli": "^11.0.0", "@nexora/config": "packages/config", "@types/express": "^5.0.0", "@types/node": "^22.0.0", "@types/pg": "^8.11.0", "typescript": "^5.7.0" } }],
 

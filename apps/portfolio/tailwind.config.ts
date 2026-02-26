@@ -16,6 +16,9 @@ const config: Config = {
   },
   plugins: [],
   safelist: [
+    "prose",
+    "prose-sm",
+    "prose-lg",
     "min-h-[calc(100dvh-3rem)]",
     "min-h-[calc(100vh-3rem)]",
     "min-h-[calc(100dvh-4rem)]",

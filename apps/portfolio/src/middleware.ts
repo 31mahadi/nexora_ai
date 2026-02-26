@@ -61,6 +61,9 @@ export async function middleware(request: NextRequest) {
           "X-Tenant-Host": hostWithoutPort,
         },
       });
+      if (!tenantRes.ok) {
+        requestHeaders.set("x-tenant-resolve-status", String(tenantRes.status));
+      }
       if (tenantRes.ok) {
         const tenant = (await tenantRes.json()) as {
           id: string;
@@ -71,12 +74,8 @@ export async function middleware(request: NextRequest) {
         requestHeaders.set("x-tenant-id", tenant.id);
         if (tenant.name) requestHeaders.set("x-tenant-name", tenant.name);
         if (!isPreview) {
-          if (tenant.theme) {
-            requestHeaders.set("x-tenant-theme", JSON.stringify(tenant.theme));
-          }
-          if (tenant.settings) {
-            requestHeaders.set("x-tenant-settings", JSON.stringify(tenant.settings));
-          }
+          requestHeaders.set("x-tenant-theme", JSON.stringify(tenant.theme ?? {}));
+          requestHeaders.set("x-tenant-settings", JSON.stringify(tenant.settings ?? {}));
         }
       }
     } catch {

@@ -1,7 +1,7 @@
 import type { HTMLAttributes } from "react";
 
 interface CardProps extends HTMLAttributes<HTMLDivElement> {
-  variant?: "elevated" | "outlined" | "filled";
+  variant?: "elevated" | "outlined" | "filled" | "none";
 }
 
 export function Card({ variant = "elevated", className = "", children, ...props }: CardProps) {
@@ -10,6 +10,7 @@ export function Card({ variant = "elevated", className = "", children, ...props 
     elevated: "bg-white dark:bg-zinc-900 shadow-lg shadow-zinc-200/50 dark:shadow-black/20",
     outlined: "border border-zinc-200 dark:border-zinc-700 bg-transparent",
     filled: "bg-zinc-50 dark:bg-zinc-800/50",
+    none: "bg-transparent border-0 shadow-none",
   };
   return (
     <div className={`${base} ${variants[variant]} ${className}`} {...props}>
