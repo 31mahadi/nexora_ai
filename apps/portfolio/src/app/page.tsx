@@ -19,6 +19,7 @@ import {
   getBlockAnimationClass,
   parsePortfolioSiteConfig,
   SEGMENT_ICON_MAP,
+  SERVICE_ICON_MAP,
   type BuilderBlock,
 } from "@nexora/portfolio-builder";
 
@@ -2020,12 +2021,49 @@ export default async function PortfolioPage() {
     }
 
     if (block.type === "services") {
+      const dataSource = String(block.settings.servicesDataSource ?? "auto");
+      const blockItems = Array.isArray(block.settings.items)
+        ? (block.settings.items as Array<{ title?: string; description?: string; icon?: string }>).filter((i) => (i.title ?? "").trim())
+        : [];
+      const apiItems = services;
+      const useBlock = dataSource === "block" || (dataSource === "auto" && blockItems.length > 0);
+      const useApi = !useBlock && (dataSource === "profile" || (dataSource === "auto" && apiItems.length > 0));
       const subtitle = String(block.settings.subtitle ?? "");
       const columns = Math.min(6, Math.max(1, Number(block.settings.columns ?? 2)));
+      const columnsMobile = Math.max(0, Number(block.settings.columnsMobile ?? 0));
       const serviceLayout = String(block.settings.serviceLayout ?? "grid");
       const serviceCardStyle = String(block.settings.serviceCardStyle ?? "bordered");
       const serviceAlignment = String(block.settings.serviceAlignment ?? "left");
+      const serviceGap = String(block.settings.serviceGap ?? "md");
+      const serviceHoverEffect = String(block.settings.serviceHoverEffect ?? "subtle");
+      const serviceTitleFontSize = String(block.settings.serviceTitleFontSize ?? "base");
+      const serviceTitleFontWeight = String(block.settings.serviceTitleFontWeight ?? "semibold");
+      const serviceDescriptionFontSize = String(block.settings.serviceDescriptionFontSize ?? "sm");
+      const serviceDescriptionColor = String(block.settings.serviceDescriptionColor ?? "muted");
+      const serviceDescriptionCustomColor = String(block.settings.serviceDescriptionCustomColor ?? "").trim() || "#52525b";
+      const serviceCardBorderRadius = String(block.settings.serviceCardBorderRadius ?? "md");
+      const serviceCardBorder = String(block.settings.serviceCardBorder ?? "default");
+      const serviceCardBorderColor = String(block.settings.serviceCardBorderColor ?? "neutral");
+      const serviceCardBorderCustomColor = String(block.settings.serviceCardBorderCustomColor ?? "").trim() || "#d4d4d8";
+      const serviceCardBgColor = String(block.settings.serviceCardBgColor ?? "default");
+      const serviceCardBgCustomColor = String(block.settings.serviceCardBgCustomColor ?? "").trim() || "#ffffff";
+      const serviceIconPosition = String(block.settings.serviceIconPosition ?? "top");
+      const serviceIconAlign = String(block.settings.serviceIconAlign ?? "left");
+      const serviceIconSize = String(block.settings.serviceIconSize ?? "md");
       const maxServices = Math.max(0, Number(block.settings.maxServices ?? 0));
+
+      let items: { id: string; title: string; description: string | null; icon?: string }[] =
+        useBlock && blockItems.length > 0
+          ? blockItems.map((i, idx) => ({
+              id: `block-${idx}`,
+              title: i.title ?? "",
+              description: i.description ?? null,
+              icon: i.icon,
+            }))
+          : useApi
+            ? apiItems.map((a) => ({ id: a.id, title: a.title, description: a.description, icon: undefined }))
+            : [];
+      if (maxServices > 0) items = items.slice(0, maxServices);
 
       const colClass =
         columns >= 6
@@ -2039,18 +2077,75 @@ export default async function PortfolioPage() {
                 : columns <= 1
                   ? "md:grid-cols-1"
                   : "md:grid-cols-2";
+      const baseColClass =
+        columnsMobile > 0
+          ? columnsMobile <= 1
+            ? "grid-cols-1"
+            : "grid-cols-1 sm:grid-cols-2"
+          : columns <= 1
+            ? "grid-cols-1"
+            : "grid-cols-1 sm:grid-cols-2";
+      const gapClass =
+        serviceGap === "none" ? "gap-0" : serviceGap === "sm" ? "gap-2" : serviceGap === "lg" ? "gap-6" : "gap-4";
+      const hoverClass =
+        serviceHoverEffect === "none"
+          ? ""
+          : serviceHoverEffect === "lift"
+            ? "transition-transform hover:-translate-y-0.5"
+            : serviceHoverEffect === "glow"
+              ? "transition-shadow hover:shadow-lg"
+              : "transition-opacity hover:opacity-90";
+      const cardRadiusClass =
+        serviceCardBorderRadius === "none"
+          ? ""
+          : serviceCardBorderRadius === "sm"
+            ? "rounded"
+            : serviceCardBorderRadius === "lg"
+              ? "rounded-lg"
+              : serviceCardBorderRadius === "full"
+                ? "rounded-full"
+                : "rounded-md";
+      const cardBgStyle: CSSProperties | undefined =
+        serviceCardBgColor === "custom"
+          ? { backgroundColor: serviceCardBgCustomColor }
+          : serviceCardBgColor === "subtle"
+            ? { backgroundColor: "#f4f4f5" }
+            : undefined;
+      const cardBorderColorStyle: CSSProperties | undefined =
+        serviceCardBorder !== "none"
+          ? serviceCardBorderColor === "custom"
+            ? { borderColor: serviceCardBorderCustomColor }
+            : serviceCardBorderColor === "primary"
+              ? { borderColor: "var(--portfolio-primary)" }
+              : serviceCardBorderColor === "accent"
+                ? { borderColor: "var(--portfolio-accent)" }
+                : undefined
+          : undefined;
+      const cardStyle: CSSProperties = { ...cardBgStyle, ...cardBorderColorStyle };
+      const iconSizeClass =
+        serviceIconSize === "sm" ? "text-lg" : serviceIconSize === "lg" ? "text-3xl" : "text-2xl";
+      const iconAlignClass =
+        serviceIconAlign === "center" ? "text-center" : serviceIconAlign === "right" ? "text-right" : "text-left";
+      const serviceTitleSizeClass =
+        serviceTitleFontSize === "sm" ? "text-sm" : serviceTitleFontSize === "lg" ? "text-lg" : "text-base";
+      const serviceTitleWeightClass =
+        serviceTitleFontWeight === "normal"
+          ? "font-normal"
+          : serviceTitleFontWeight === "medium"
+            ? "font-medium"
+            : serviceTitleFontWeight === "bold"
+              ? "font-bold"
+              : "font-semibold";
+      const serviceDescSizeClass =
+        serviceDescriptionFontSize === "xs" ? "text-xs" : serviceDescriptionFontSize === "base" ? "text-base" : "text-sm";
+      const serviceDescColorStyle: CSSProperties | undefined =
+        serviceDescriptionColor === "custom"
+          ? { color: serviceDescriptionCustomColor }
+          : serviceDescriptionColor === "muted"
+            ? { color: "#52525b" }
+            : undefined;
 
-      const blockItems = Array.isArray(block.settings.items)
-        ? (block.settings.items as Array<{ title?: string; description?: string }>).filter((i) => (i.title ?? "").trim())
-        : [];
-      const apiItems = services;
-      let items =
-        blockItems.length > 0
-          ? blockItems.map((i, idx) => ({ id: `block-${idx}`, title: i.title ?? "", description: i.description ?? null }))
-          : apiItems;
-      if (maxServices > 0) items = items.slice(0, maxServices);
-
-      const emptyMessage = String(block.settings.emptyMessage ?? "Add services below or from the admin panel.");
+      const emptyMessage = String(block.settings.emptyMessage ?? "Add services below or from your admin profile.");
 
       const cardClass =
         serviceCardStyle === "elevated"
@@ -2059,40 +2154,202 @@ export default async function PortfolioPage() {
             ? "border-0 bg-zinc-50/80"
             : "border-zinc-200 bg-white/80";
 
-      const alignClass = serviceAlignment === "center" ? "text-center" : "text-left";
+      const alignClass =
+        serviceAlignment === "center" ? "text-center" : serviceAlignment === "right" ? "text-right" : "text-left";
 
-      const renderServiceCard = (service: { id: string; title: string; description: string | null }) => (
-        <Card key={service.id} variant="outlined" className={`${cardClass}`}>
-          <h3 className={`font-semibold ${alignClass}`}>{service.title}</h3>
-          {service.description && (
-            <p className={`mt-2 text-sm text-zinc-600 ${alignClass}`}>{service.description}</p>
-          )}
-        </Card>
-      );
+      const siteFont = String(siteConfig.fontFamily ?? "inherit");
+      const servicesTitleFontFamily = String(block.settings.servicesTitleFontFamily ?? "inherit");
+      const servicesTitleFontSize = String(block.settings.servicesTitleFontSize ?? "inherit");
+      const servicesTitleFontWeight = String(block.settings.servicesTitleFontWeight ?? "bold");
+      const servicesTitleColor = String(block.settings.servicesTitleColor ?? "inherit");
+      const servicesTitleCustomColor = String(block.settings.servicesTitleCustomColor ?? "").trim() || theme.primary;
+      const servicesSubtitleFontFamily = String(block.settings.servicesSubtitleFontFamily ?? "inherit");
+      const servicesSubtitleFontSize = String(block.settings.servicesSubtitleFontSize ?? "inherit");
+      const servicesSubtitleFontWeight = String(block.settings.servicesSubtitleFontWeight ?? "inherit");
+      const servicesSubtitleColor = String(block.settings.servicesSubtitleColor ?? "inherit");
+      const servicesSubtitleCustomColor = String(block.settings.servicesSubtitleCustomColor ?? "").trim() || "#52525b";
+
+      const servicesTitleFontClass =
+        (servicesTitleFontFamily === "inherit" ? siteFont : servicesTitleFontFamily) !== "inherit"
+          ? `font-hero-${servicesTitleFontFamily === "inherit" ? siteFont : servicesTitleFontFamily}`
+          : "";
+      const servicesTitleSizeMap: Record<string, string> = { "2xl": "text-2xl", "3xl": "text-3xl", "4xl": "text-4xl" };
+      const servicesTitleSizeClass =
+        servicesTitleFontSize === "inherit" ? "text-3xl" : servicesTitleSizeMap[servicesTitleFontSize] ?? "text-3xl";
+      const servicesTitleWeightClass =
+        servicesTitleFontWeight === "inherit"
+          ? "font-bold"
+          : servicesTitleFontWeight === "medium"
+            ? "font-medium"
+            : servicesTitleFontWeight === "semibold"
+              ? "font-semibold"
+              : servicesTitleFontWeight === "normal"
+                ? "font-normal"
+                : "font-bold";
+      const servicesTitleColorStyle = (): CSSProperties | undefined => {
+        if (servicesTitleColor === "inherit") return undefined;
+        if (servicesTitleColor === "primary") return { color: "var(--portfolio-primary)" };
+        if (servicesTitleColor === "accent") return { color: "var(--portfolio-accent)" };
+        if (servicesTitleColor === "custom") return { color: servicesTitleCustomColor };
+        return undefined;
+      };
+
+      const servicesSubtitleFontClass =
+        (servicesSubtitleFontFamily === "inherit" ? siteFont : servicesSubtitleFontFamily) !== "inherit"
+          ? `font-hero-${servicesSubtitleFontFamily === "inherit" ? siteFont : servicesSubtitleFontFamily}`
+          : "";
+      const servicesSubtitleSizeMap: Record<string, string> = { sm: "text-sm", base: "text-base", lg: "text-lg" };
+      const servicesSubtitleSizeClass =
+        servicesSubtitleFontSize === "inherit" ? "text-base" : servicesSubtitleSizeMap[servicesSubtitleFontSize] ?? "text-base";
+      const servicesSubtitleWeightClass =
+        servicesSubtitleFontWeight === "inherit"
+          ? ""
+          : servicesSubtitleFontWeight === "normal"
+            ? "font-normal"
+            : servicesSubtitleFontWeight === "medium"
+              ? "font-medium"
+              : servicesSubtitleFontWeight === "semibold"
+                ? "font-semibold"
+                : servicesSubtitleFontWeight === "bold"
+                  ? "font-bold"
+                  : "";
+      const servicesSubtitleColorStyle = (): CSSProperties | undefined => {
+        if (servicesSubtitleColor === "inherit") return undefined;
+        if (servicesSubtitleColor === "primary") return { color: "var(--portfolio-primary)" };
+        if (servicesSubtitleColor === "accent") return { color: "var(--portfolio-accent)" };
+        if (servicesSubtitleColor === "custom") return { color: servicesSubtitleCustomColor };
+        return undefined;
+      };
+
+      const headerAlign = String(block.settings.servicesHeaderAlign ?? "left");
+      const headerAlignClass =
+        headerAlign === "center" ? "text-center" : headerAlign === "right" ? "text-right" : "text-left";
+      const headerGap = String(block.settings.headerGap ?? "md");
+      const headerGapClass = headerGap === "none" ? "" : headerGap === "sm" ? "mt-1" : headerGap === "lg" ? "mt-3" : "mt-2";
+
+      const sectionBgColor = String(block.settings.sectionBgColor ?? "none");
+      const sectionBgStyle =
+        sectionBgColor === "custom"
+          ? { backgroundColor: String(block.settings.sectionBgCustomColor ?? "#fafafa") }
+          : sectionBgColor === "light"
+            ? { backgroundColor: "#f4f4f5" }
+            : undefined;
+      const sectionPadding = String(block.settings.sectionPadding ?? "md");
+      const sectionPaddingClass =
+        sectionPadding === "none" ? "" : sectionPadding === "sm" ? "py-4" : sectionPadding === "lg" ? "py-12" : "py-8";
+      const sectionBorder = String(block.settings.sectionBorder ?? "none");
+      const sectionBorderClass =
+        sectionBorder === "top" ? "border-t border-zinc-200" : sectionBorder === "full" ? "border border-zinc-200" : "";
+
+      const renderServiceCard = (service: { id: string; title: string; description: string | null; icon?: string }) => {
+        const iconEmoji = service.icon ? SERVICE_ICON_MAP[service.icon] : null;
+        const renderIcon = () =>
+          iconEmoji ? (
+            <span className={`${iconSizeClass} shrink-0`} aria-hidden>
+              {iconEmoji}
+            </span>
+          ) : null;
+        const renderContent = () => (
+          <div className={`min-w-0 flex-1 ${alignClass}`}>
+            {serviceIconPosition === "top" && iconEmoji && (
+              <span className={`mb-2 block ${iconSizeClass} ${iconAlignClass}`} aria-hidden>
+                {iconEmoji}
+              </span>
+            )}
+            {serviceIconPosition === "inline" && iconEmoji && (
+              <span className={`inline-flex items-center gap-2 ${iconAlignClass}`}>
+                {renderIcon()}
+                <h3 className={`${serviceTitleSizeClass} ${serviceTitleWeightClass}`}>{service.title}</h3>
+              </span>
+            )}
+            {serviceIconPosition !== "inline" && (
+              <h3 className={`${serviceTitleSizeClass} ${serviceTitleWeightClass}`}>{service.title}</h3>
+            )}
+            {service.description && (
+              <p
+                className={`mt-2 ${serviceDescSizeClass} ${alignClass}`}
+                style={serviceDescColorStyle ?? { color: "#52525b" }}
+              >
+                {service.description}
+              </p>
+            )}
+          </div>
+        );
+        return (
+          <Card
+            key={service.id}
+            variant="outlined"
+            className={`${cardClass} ${cardRadiusClass} ${hoverClass}`}
+            style={cardStyle}
+          >
+            {serviceIconPosition === "left" && iconEmoji ? (
+              <div className="flex gap-3 items-start">
+                {renderIcon()}
+                {renderContent()}
+              </div>
+            ) : (
+              renderContent()
+            )}
+          </Card>
+        );
+      };
 
       return (
-        <section id={sectionId(block)} className={sectionClass} style={getBlockSectionStyle(block.style)}>
+        <section
+          id={sectionId(block)}
+          className={`${sectionClass} ${sectionPaddingClass} ${sectionBorderClass}`}
+          style={{ ...getBlockSectionStyle(block.style), ...sectionBgStyle }}
+        >
           <div className={containerClass} style={style}>
-            <h2 className="mb-6 text-3xl font-bold">{String(block.settings.title ?? "Services")}</h2>
-            {subtitle && <p className="mb-6 text-zinc-600">{subtitle}</p>}
+            <div className={`mb-6 ${headerAlignClass}`}>
+              <h2
+                className={`${servicesTitleFontClass} ${servicesTitleSizeClass} ${servicesTitleWeightClass}`}
+                style={servicesTitleColorStyle()}
+              >
+                {String(block.settings.title ?? "Services")}
+              </h2>
+              {subtitle && (
+                <p
+                  className={`${servicesSubtitleFontClass} ${servicesSubtitleSizeClass} ${servicesSubtitleWeightClass} ${headerGapClass}`}
+                  style={servicesSubtitleColorStyle()}
+                >
+                  {subtitle}
+                </p>
+              )}
+            </div>
             {items.length > 0 ? (
               serviceLayout === "list" ? (
-                <div className="space-y-3">
+                <div className={`flex flex-col ${gapClass}`}>
                   {items.map((service) => renderServiceCard(service))}
                 </div>
               ) : serviceLayout === "compact" ? (
-                <div className="flex flex-wrap gap-2">
+                <div className={`flex flex-wrap ${gapClass}`}>
                   {items.map((service) => (
-                    <Card key={service.id} variant="outlined" className={`px-4 py-2 ${cardClass}`}>
-                      <span className={`font-medium ${alignClass}`}>{service.title}</span>
+                    <Card
+                      key={service.id}
+                      variant="outlined"
+                      className={`px-4 py-2 ${cardClass} ${cardRadiusClass} ${hoverClass}`}
+                      style={cardStyle}
+                    >
+                      <span className={`${serviceTitleSizeClass} ${serviceTitleWeightClass} ${alignClass}`}>
+                        {service.icon && SERVICE_ICON_MAP[service.icon] && (
+                          <span className={`mr-2 ${iconSizeClass}`}>{SERVICE_ICON_MAP[service.icon]}</span>
+                        )}
+                        {service.title}
+                      </span>
                       {service.description && (
-                        <span className={`ml-2 text-sm text-zinc-500 ${alignClass}`}>— {service.description}</span>
+                        <span
+                          className={`ml-2 ${serviceDescSizeClass} ${alignClass}`}
+                          style={serviceDescColorStyle ?? { color: "#71717a" }}
+                        >
+                          — {service.description}
+                        </span>
                       )}
                     </Card>
                   ))}
                 </div>
               ) : (
-                <div className={`grid gap-4 ${colClass}`}>
+                <div className={`grid ${baseColClass} ${gapClass} ${colClass}`}>
                   {items.map((service) => renderServiceCard(service))}
                 </div>
               )

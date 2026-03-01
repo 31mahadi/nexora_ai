@@ -78,6 +78,8 @@ import { TextBlockSettings } from "@/components/design/TextBlockSettings";
 import { TextDesignPreview, type TextComponentType } from "@/components/design/TextDesignPreview";
 import { SkillsBlockSettings, type SkillsComponentType } from "@/components/design/SkillsBlockSettings";
 import { SkillsDesignPreview } from "@/components/design/SkillsDesignPreview";
+import { ServicesBlockSettings, type ServicesComponentType } from "@/components/design/ServicesBlockSettings";
+import { ServicesDesignPreview } from "@/components/design/ServicesDesignPreview";
 import { ImageField } from "@/components/design/ImageField";
 import {
   BLOCK_LIBRARY,
@@ -232,6 +234,7 @@ export default function DesignPage() {
   const [selectedHeroComponent, setSelectedHeroComponent] = useState<HeroComponentType | null>(null);
   const [selectedTextComponent, setSelectedTextComponent] = useState<TextComponentType | null>(null);
   const [selectedSkillsComponent, setSelectedSkillsComponent] = useState<SkillsComponentType | null>(null);
+  const [selectedServicesComponent, setSelectedServicesComponent] = useState<ServicesComponentType | null>(null);
   const [onboardingDismissed, setOnboardingDismissed] = useState(false);
   const autoSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const initialLoadRef = useRef(true);
@@ -954,148 +957,15 @@ export default function DesignPage() {
     }
 
     if (block.type === "services") {
-      const items = Array.isArray(block.settings.items)
-        ? (block.settings.items as Array<{ title?: string; description?: string }>)
-        : [];
       return (
-        <div className="space-y-3">
-          <p className="text-xs font-medium uppercase tracking-wide text-zinc-500">Content settings</p>
-          <Input
-            value={String(block.settings.title ?? "")}
-            onChange={(e) => updateBlockSettings(block.id, { title: e.target.value })}
-            placeholder="Section title"
-          />
-          <Input
-            value={String(block.settings.subtitle ?? "")}
-            onChange={(e) => updateBlockSettings(block.id, { subtitle: e.target.value })}
-            placeholder="Section subtitle (optional)"
-          />
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-            <div>
-              <p className="mb-1.5 text-xs font-medium text-zinc-600">Grid columns</p>
-              <Input
-                type="number"
-                min={1}
-                max={6}
-                value={String(block.settings.columns ?? 2)}
-                onChange={(e) => {
-                  const v = Math.min(6, Math.max(1, Number(e.target.value) || 2));
-                  updateBlockSettings(block.id, { columns: v });
-                }}
-                placeholder="1–6"
-              />
-            </div>
-            <div>
-              <p className="mb-1.5 text-xs font-medium text-zinc-600">Layout</p>
-              <select
-                value={String(block.settings.serviceLayout ?? "grid")}
-                onChange={(e) =>
-                  updateBlockSettings(block.id, {
-                    serviceLayout: e.target.value as "grid" | "list" | "compact",
-                  })
-                }
-                className="h-11 w-full rounded-lg border border-zinc-300 bg-white px-4 py-3 text-sm text-zinc-700 box-border"
-              >
-                <option value="grid">Grid</option>
-                <option value="list">List</option>
-                <option value="compact">Compact</option>
-              </select>
-            </div>
-            <div>
-              <p className="mb-1.5 text-xs font-medium text-zinc-600">Card style</p>
-              <select
-                value={String(block.settings.serviceCardStyle ?? "bordered")}
-                onChange={(e) =>
-                  updateBlockSettings(block.id, {
-                    serviceCardStyle: e.target.value as "bordered" | "elevated" | "minimal",
-                  })
-                }
-                className="h-11 w-full rounded-lg border border-zinc-300 bg-white px-4 py-3 text-sm text-zinc-700 box-border"
-              >
-                <option value="bordered">Bordered</option>
-                <option value="elevated">Elevated</option>
-                <option value="minimal">Minimal</option>
-              </select>
-            </div>
-            <div>
-              <p className="mb-1.5 text-xs font-medium text-zinc-600">Alignment</p>
-              <select
-                value={String(block.settings.serviceAlignment ?? "left")}
-                onChange={(e) =>
-                  updateBlockSettings(block.id, {
-                    serviceAlignment: e.target.value as "left" | "center",
-                  })
-                }
-                className="h-11 w-full rounded-lg border border-zinc-300 bg-white px-4 py-3 text-sm text-zinc-700 box-border"
-              >
-                <option value="left">Left</option>
-                <option value="center">Center</option>
-              </select>
-            </div>
-          </div>
-          <div>
-            <p className="mb-1.5 text-xs font-medium text-zinc-600">Max services (0 = no limit)</p>
-            <Input
-              type="number"
-              min={0}
-              value={String(block.settings.maxServices ?? 0)}
-              onChange={(e) =>
-                updateBlockSettings(block.id, {
-                  maxServices: Math.max(0, Number(e.target.value) || 0),
-                })
-              }
-              placeholder="0"
-            />
-          </div>
-          <Input
-            value={String(block.settings.emptyMessage ?? "")}
-            onChange={(e) => updateBlockSettings(block.id, { emptyMessage: e.target.value })}
-            placeholder="Empty state message (optional)"
-          />
-          <div className="space-y-2">
-            {items.map((item, idx) => (
-              <div key={idx} className="space-y-2 rounded-lg border border-zinc-200 p-3">
-                <Input
-                  value={item.title ?? ""}
-                  onChange={(e) => {
-                    const n = [...items];
-                    n[idx] = { ...n[idx], title: e.target.value };
-                    updateBlockSettings(block.id, { items: n });
-                  }}
-                  placeholder="Service title"
-                />
-                <textarea
-                  value={item.description ?? ""}
-                  onChange={(e) => {
-                    const n = [...items];
-                    n[idx] = { ...n[idx], description: e.target.value };
-                    updateBlockSettings(block.id, { items: n });
-                  }}
-                  placeholder="Description (optional)"
-                  rows={2}
-                  className="w-full rounded-lg border border-zinc-300 px-3 py-2 text-sm"
-                />
-                <Button
-                  type="button"
-                  variant="secondary"
-                  onClick={() => updateBlockSettings(block.id, { items: items.filter((_, i) => i !== idx) })}
-                >
-                  <Trash2 className="h-4 w-4" />
-                </Button>
-              </div>
-            ))}
-            <Button
-              type="button"
-              variant="secondary"
-              onClick={() =>
-                updateBlockSettings(block.id, { items: [...items, { title: "", description: "" }] })
-              }
-            >
-              <Plus className="h-4 w-4" />
-              Add service
-            </Button>
-          </div>
-        </div>
+        <ServicesBlockSettings
+          block={block}
+          updateBlockSettings={updateBlockSettings}
+          theme={{ primary: theme.primary, accent: theme.accent }}
+          FONT_OPTIONS={FONT_OPTIONS}
+          selectedComponent={selectedServicesComponent}
+          onClearSelection={() => setSelectedServicesComponent(null)}
+        />
       );
     }
 
@@ -3018,9 +2888,13 @@ export default function DesignPage() {
                     const expandedSkills = siteConfig.blocks.find(
                       (b) => b.type === "skills" && expandedBlocks.has(b.id)
                     );
+                    const expandedServices = siteConfig.blocks.find(
+                      (b) => b.type === "services" && expandedBlocks.has(b.id)
+                    );
                     const textBlock = expandedText ?? siteConfig.blocks.find((b) => b.type === "text");
                     const heroBlock = expandedHero ?? siteConfig.blocks.find((b) => b.type === "hero");
                     const skillsBlock = expandedSkills ?? siteConfig.blocks.find((b) => b.type === "skills");
+                    const servicesBlock = expandedServices ?? siteConfig.blocks.find((b) => b.type === "services");
 
                     if (expandedText && textBlock) {
                       return (
@@ -3072,6 +2946,26 @@ export default function DesignPage() {
                             block={skillsBlock}
                             selectedComponent={selectedSkillsComponent}
                             onSelectComponent={(c) => setSelectedSkillsComponent(c ?? null)}
+                            updateBlockSettings={updateBlockSettings}
+                            theme={{ primary: theme.primary, accent: theme.accent }}
+                            viewportWidth={
+                              previewViewport === "desktop"
+                                ? 640
+                                : previewViewport === "tablet"
+                                  ? 480
+                                  : 375
+                            }
+                          />
+                        </div>
+                      );
+                    }
+                    if (expandedServices && servicesBlock) {
+                      return (
+                        <div className="w-full max-w-full overflow-auto">
+                          <ServicesDesignPreview
+                            block={servicesBlock}
+                            selectedComponent={selectedServicesComponent}
+                            onSelectComponent={(c) => setSelectedServicesComponent(c ?? null)}
                             updateBlockSettings={updateBlockSettings}
                             theme={{ primary: theme.primary, accent: theme.accent }}
                             viewportWidth={
@@ -3148,9 +3042,29 @@ export default function DesignPage() {
                         </div>
                       );
                     }
+                    if (servicesBlock) {
+                      return (
+                        <div className="w-full max-w-full overflow-auto">
+                          <ServicesDesignPreview
+                            block={servicesBlock}
+                            selectedComponent={selectedServicesComponent}
+                            onSelectComponent={(c) => setSelectedServicesComponent(c ?? null)}
+                            updateBlockSettings={updateBlockSettings}
+                            theme={{ primary: theme.primary, accent: theme.accent }}
+                            viewportWidth={
+                              previewViewport === "desktop"
+                                ? 640
+                                : previewViewport === "tablet"
+                                  ? 480
+                                  : 375
+                            }
+                          />
+                        </div>
+                      );
+                    }
                     return (
                       <div className="rounded-lg border border-zinc-300 bg-white p-8 text-center text-zinc-500">
-                        <p className="text-sm">Add a Hero, Text, or Skills block to use design preview.</p>
+                        <p className="text-sm">Add a Hero, Text, Skills, or Services block to use design preview.</p>
                         <p className="mt-2 text-xs">Expand a block and click the Layout icon to switch to design mode.</p>
                       </div>
                     );
